@@ -46,7 +46,7 @@ Generic RAG (Retrieval-Augmented Generation) systems often fail when applied to 
 *   **Transparent Chat Interface:** A conversational UI that provides:
     *   **Source Citations:** Hyperlinked references to specific document chunks.
     *   **Confidence Indicators:** Visual representation of retrieval strength.
-    *   **Reasoning Panel:** A dedicated "System Thought" view that explicitly shows *why* a fallback was triggered (e.g., "Confidence score 0.42 < 0.60; retrying with rewritten query").
+    *   **Reasoning Panel:** A dedicated "System Thought" view that explicitly shows *why* a fallback was triggered (e.g., "Confidence score 0.58 < 0.75; retrying with rewritten query").
 
 ---
 
