@@ -67,8 +67,3 @@ Vector search is great for "What is the general concept of X?" but fails at "Whe
 
 ### 5.3 The "Reasoning Panel" Strategy
 Rather than hiding the RAG complexity, the React frontend is designed to "show the work." When a confidence score falls below a threshold (e.g., 0.6), the UI doesn't just show a fallback answer; it triggers a **Framer Motion** animation that reveals the system's internal decision to rewrite the query. This demonstrates **graceful uncertainty**, a key requirement for production-grade AI.
-
----
-**Related Documentation**
-* [Phoenix PRD](file:///path/to/Phoenix_PRD.md)
-* [Phoenix — Feature List](file:///path/to/Phoenix_Feature_List.txt)
