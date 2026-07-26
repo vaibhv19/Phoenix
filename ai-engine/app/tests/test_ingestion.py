@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, patch
 import pytest
-from app.services.ingestion import PDFExtractor
+from app.services.ingestion import PDFExtractor, DocumentChunker
 
 @patch("app.services.ingestion.os.path.exists")
 @patch("app.services.ingestion.PdfReader")
@@ -31,3 +31,20 @@ def test_pdf_extractor_file_not_found(mock_exists):
 
     with pytest.raises(FileNotFoundError):
         PDFExtractor.extract_pages("nonexistent.pdf")
+
+def test_document_chunker_success():
+    pages = [
+        {"page": 1, "text": "This is page one content. " * 50},  # ~1300 chars
+        {"page": 2, "text": "This is page two content. Short page."}
+    ]
+
+    chunks = DocumentChunker.chunk_pages(pages, chunk_size=800, chunk_overlap=150)
+
+    assert len(chunks) >= 2
+    # Verify metadata & indexes
+    assert chunks[0]["metadata"]["page_number"] == 1
+    assert len(chunks[0]["content"]) <= 800
+
+    # Assert sequential global indexing
+    for i, chunk in enumerate(chunks):
+        assert chunk["chunk_index"] == i
