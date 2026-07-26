@@ -1,95 +1,71 @@
-# Product Requirements Document (PRD): Project Phoenix
+# Product Requirements Document (PRD): Phoenix
 
-**Status:** Draft / Initial Concept  
-**Version:** 1.0  
-**Domain:** RAG for Technical Documentation (Spring Boot / AWS)
-
----
-
-## 1. Executive Summary
-Project Phoenix is an advanced Retrieval-Augmented Generation (RAG) platform designed specifically for high-precision technical documentation. Unlike standard RAG systems that often hallucinate or provide vague answers, Phoenix utilizes a **Hybrid Search** strategy and a **Self-Correcting Reasoning Engine**. It prioritizes transparency by showing the "why" behind its retrieval process and proactively asking for clarification when confidence is low.
-
-## 2. Problem Statement
-Technical documentation (e.g., Spring Boot configs, AWS IAM policies) requires exact-match precision. 
-1. **Semantic Search Failures:** Vector-only search often misses specific error codes or configuration keys (e.g., `server.port` vs. `server.servlet.context-path`).
-2. **The Black Box:** Users don’t know why an AI gave a specific answer or if it "guessed" based on low-quality data.
-3. **Hallucination:** Systems often force an answer even when the documentation is missing the required info.
-
-## 3. Goals & Objectives
-*   **Precision:** Use Hybrid Search (Vector + BM25) to ensure exact technical terms are indexed and retrieved.
-*   **Transparency:** Surface the system’s internal reasoning (fallback triggers) to the end-user.
-*   **Reliability:** Implement a "Confidence Score" threshold to trigger query rewriting or user clarification.
-*   **Scalability:** Separate concerns between a robust Java-based orchestration layer and a Python-based AI engine.
+**Project Name:** Phoenix — Transparent RAG for Technical Documentation  
+**Status:** Planning / Architecture Phase  
+**Document Version:** 1.0  
 
 ---
 
-## 4. Target Audience
-*   **Software Engineers:** Looking for specific configuration details or troubleshooting Spring Boot/AWS issues.
-*   **DevOps/Cloud Architects:** Needing precise syntax for infrastructure-as-code or service limits.
-*   **Technical Writers:** Verifying documentation coverage and accuracy.
+## 1. Problem Statement
+Generic RAG (Retrieval-Augmented Generation) systems often fail when applied to dense technical documentation (e.g., Spring Boot, AWS Whitepapers). Two specific failure modes predominate:
+1.  **Term Sensitivity:** Pure semantic vector search often misses exact-match technical identifiers (e.g., specific configuration keys like `spring.jpa.hibernate.ddl-auto` or error codes) in favor of conceptually similar but technically incorrect passages.
+2.  **The Black Box Problem:** Users are presented with a confident answer but have no visibility into the system’s internal certainty or the "self-correction" steps taken when the initial retrieval was poor.
+
+**Phoenix** addresses these gaps by implementing a **hybrid search** (Vector + Keyword/BM25) and a **transparency-first UI** that surfaces fallback reasoning and confidence scores, prioritizing technical accuracy over conversational fluency.
 
 ---
 
-## 5. Functional Requirements
-
-### 5.1 Spring Boot API Layer (Orchestration)
-*   **Authentication:** JWT-based login and session management.
-*   **Project Management:** Ability to group documents into "Projects" (e.g., "Payment Service Docs").
-*   **File Handling:** Secure upload of PDFs/Markdown; status tracking (Pending, Processing, Indexed).
-*   **Internal Routing:** A RESTful contract to pass processed text and metadata to the Python AI engine.
-*   **Persistence:** Store document metadata, user query history, and "Helpfulness" feedback in a relational database.
-
-### 5.2 Python AI Engine (Intelligence)
-*   **Hybrid Ingestion:** 
-    *   Chunking strategy optimized for code blocks and technical lists.
-    *   Dual-indexing: Dense embeddings (Vector) and Sparse embeddings (BM25/Keyword).
-*   **The Retrieval Pipeline:**
-    *   **Search:** Execute hybrid search and merge results using Reciprocal Rank Fusion (RRF).
-    *   **Scoring:** Assign a confidence score to the retrieved context.
-*   **Self-Correction Logic (The "Phoenix" Loop):**
-    *   *If Score < Threshold:* Execute **Query Rewriting** (LLM rephrases the question to find better context).
-    *   *If Score still low:* Execute **Re-ranking** across a wider pool of documents.
-    *   *Final Fallback:* If no high-confidence data exists, return a "Confidence Alert" asking the user for clarification.
-
-### 5.3 React Frontend (User Experience)
-*   **Document Workspace:** Sidebar for managing uploaded docs and project settings.
-*   **Transparent Chat:** 
-    *   Display the final answer with **Inline Citations**.
-    *   **Reasoning Panel:** A collapsible section showing: *"I initially searched for X, found low-quality results, so I reformulated the query to Y to find the specific config key."*
-*   **Source Preview:** Clickable citations that highlight the relevant text in the original document.
+## 2. Target Persona & Use Case
+*   **Target Persona:** Technical Reviewers and Recruiters.
+*   **Core Use Case:** A user uploads a 50-page technical PDF (e.g., an AWS Architecture guide). They query the system for a specific implementation detail. Phoenix retrieves the source, calculates confidence, and—if the initial search is weak—demonstrates its ability to rewrite the query or ask a clarifying question rather than hallucinating an answer.
 
 ---
 
-## 6. Technical Architecture
+## 3. Functional Requirements (In-Scope)
 
-| Component | Technology | Responsibility |
-| :--- | :--- | :--- |
-| **Frontend** | React, Tailwind CSS, Lucide Icons | UI/UX, Chat Interface, Transparency Logs |
-| **Backend** | Spring Boot 3, Spring Security, JPA | Auth, CRUD, Document Orchestration, API Gateway |
-| **AI Engine** | Python (FastAPI/LangChain/LlamaIndex) | Chunking, Hybrid Search, LLM Orchestration |
-| **Vector Store** | Pinecone / pgvector / FAISS | Storing and searching technical embeddings |
-| **Search** | BM25 + Vector (Hybrid) | Exact keyword matching + Semantic context |
-| **LLM** | GPT-4o or Claude 3.5 Sonnet | Reasoning, Rewriting, and Synthesis |
+### 3.1 Python AI Engine (Core Logic)
+*   **Ingestion Pipeline:** Automated PDF parsing, recursive character chunking, and embedding generation.
+*   **Hybrid Retrieval Engine:** Implementation of a dual-search pipeline combining:
+    *   **Vector Search:** For semantic and conceptual matching.
+    *   **Keyword Search (BM25):** For exact-match technical term retrieval.
+*   **Vector Persistence:** Storage of embeddings in a vector database (Pinecone, pgvector, or FAISS).
+*   **Confidence Scoring:** Each retrieval must produce a confidence metric based on similarity thresholds and keyword overlap.
+*   **Fallback Logic Execution:** Triggering of specific strategies when confidence is low:
+    *   **Query Rewriting:** Reformulating the user's prompt and retrying the search.
+    *   **Re-ranking:** Re-evaluating the top-K retrieved chunks using a cross-encoder approach.
+    *   **Clarification Generation:** Formulating a question back to the user when retrieval remains insufficient.
+
+### 3.2 Spring Boot API Layer (Platform Orchestration)
+*   **Security:** Implementation of stateless JWT authentication for user session management.
+*   **Document Management:** REST endpoints for uploading PDF files and managing metadata (document status, chunk references).
+*   **Metadata Persistence:** Storage of query history, document associations, and confidence logs in a relational database.
+*   **AI Service Bridge:** A structured internal API contract to communicate with the Python AI engine over REST.
+
+### 3.3 React Frontend (The Interface)
+*   **Document Vault:** Interface for uploading and tracking the processing state of technical PDFs.
+*   **Transparent Chat Interface:** A conversational UI that provides:
+    *   **Source Citations:** Hyperlinked references to specific document chunks.
+    *   **Confidence Indicators:** Visual representation of retrieval strength.
+    *   **Reasoning Panel:** A dedicated "System Thought" view that explicitly shows *why* a fallback was triggered (e.g., "Confidence score 0.42 < 0.60; retrying with rewritten query").
 
 ---
 
-## 7. Key Differentiators (The "Secret Sauce")
-1.  **Hybrid Search over Vector-Only:** Essential for technical domains where `EnableAutoConfiguration` is a specific token that must be matched exactly, not just "semantically."
-2.  **Explicit Fallback UI:** Instead of a generic "I don't know," the system explains its attempt: *"I found 3 documents mentioning 'S3', but none mentioned 'Cross-Region Replication'. Could you specify which AWS region you are using?"*
-3.  **Source Attribution:** Every claim is backed by a specific chunk ID and document reference stored in the Spring Boot metadata layer.
+## 4. Explicit Non-Goals
+*   **No Infrastructure Deployment:** This project is for local/architecture demonstration; automated cloud deployment (AWS/Azure) is out of scope.
+*   **No Multi-Document Cross-Referencing:** Initial scope is limited to RAG over a single project/document context at a time.
+*   **Limited File Support:** Support is strictly for PDF files; no support for .txt, .docx, or .html.
+*   **Basic Auth Only:** No OAuth2 (Google/GitHub) or complex RBAC (Role-Based Access Control) beyond basic user identification.
 
 ---
 
-## 8. Success Metrics
-*   **Retrieval Accuracy:** % of queries where the correct technical document was in the Top 3 retrieved chunks.
-*   **Hallucination Rate:** Measured by manual audit of "Confident" vs "Low Confidence" flagged answers.
-*   **User Trust:** High engagement with the "Reasoning" panel.
-*   **Latency:** End-to-end response time under 4 seconds (including potential query rewriting).
+## 5. Success Criteria
+*   **Hybrid Superiority:** In benchmarking, the system must successfully retrieve exact-match technical keys (e.g., `server.port`) that are missed by a pure vector-search baseline.
+*   **Graceful Uncertainty:** The system must trigger a "Clarification" or "Query Rewrite" fallback 100% of the time when queried about topics not present in the uploaded document, rather than hallucinating.
+*   **Auditability:** A technical reviewer must be able to follow the logic path from "User Query" to "Confidence Score" to "Fallback Strategy" via the UI.
 
 ---
 
-## 9. Roadmap
-*   **Phase 1 (MVP):** Basic Spring Boot/Python integration, PDF upload, and standard RAG.
-*   **Phase 2 (Hybrid):** Implementation of BM25 + Vector search and RRF.
-*   **Phase 3 (Self-Correction):** Integration of Confidence Scoring and Query Rewriting logic.
-*   **Phase 4 (UI Transparency):** Deployment of the Reasoning Panel and Source Highlighting in React.
+## 6. Key Risks & Open Questions
+*   **Chunk Size Optimization:** Finding the balance between code-block integrity and embedding model context limits.
+*   **Confidence Calibration:** Defining the mathematical threshold at which "Vector + BM25" is considered "low confidence."
+*   **Latency:** The overhead of running query rewriting and re-ranking may increase response times; needs monitoring.
