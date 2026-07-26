@@ -45,24 +45,32 @@ When initial retrieval is ambiguous, the system executes a self-correction loop.
 
 ```mermaid
 graph TD
-    A[Initial Hybrid Retrieval] --> B{Confidence > 0.75?}
-    B -- Yes --> C[Generate Answer]
-    B -- No --> D[Log Trace: 'Low Confidence']
-    D --> E[Query Rewriting: Reformulate Query]
-    E --> F[Secondary Retrieval]
-    F --> G{Confidence > 0.60?}
-    G -- Yes --> H[Re-rank Chunks & Generate]
-    G -- No --> I[Log Trace: 'Ambiguous Context']
-    I --> J[Ask User Clarifying Question]
+    Start[Initial Hybrid Retrieval] --> C{Confidence?}
+    
+    C -- "> 0.75 (Green)" --> Gen[Direct Answer Generation]
+    
+    C -- "0.50 - 0.75 (Yellow)" --> Rew[Rewrite Query]
+    Rew --> H2[Re-run Hybrid Search]
+    H2 --> C2{Confidence > 0.75?}
+    C2 -- Yes --> Gen
+    C2 -- No --> Rerank
+    
+    C -- "0.35 - 0.50 (Orange)" --> Rerank[Cross-Encoder Re-rank]
+    Rerank --> C3{Score > 0.50?}
+    C3 -- Yes --> Gen
+    C3 -- No --> Clarify
+    
+    C -- "< 0.35 (Red)" --> Clarify[Ask Clarifying Question]
 ```
 
-1.  **Detection:** Initial retrieval yields a low confidence score (e.g., 0.35) (Python).
-2.  **Trace Logging:** A "Reasoning Trace" object is initialized: `{ "trigger": "low_confidence", "score": 0.35 }` (Python).
-3.  **Rewrite Strategy:** System uses a "Query-to-Query" LLM prompt to expand abbreviations or clarify technical terms (Python).
-4.  **Retry:** A second retrieval is attempted with the expanded query (Python).
-5.  **Re-ranking:** Top 10 chunks from both attempts are passed through a Cross-Encoder to identify the most relevant context (Python).
-6.  **Final Evaluation:** If confidence remains below 0.50 after re-ranking, the system aborts generation to prevent hallucination (Python).
-7.  **Handoff:** Return answer (or clarification question) + the complete `reasoning_trace` (Python → Spring Boot → React).
+1.  **Detection:** Initial retrieval yields a marginal confidence score (e.g., 0.58) or low confidence score (e.g., 0.42) (Python).
+2.  **Trace Logging:** A `ReasoningStepDto` object is initialized and logged into `reasoningTrace`: `{ "step": "INITIAL_RETRIEVAL", "action": "Hybrid search (Vector + BM25)", "outcome": "Marginal confidence (0.58) detected" }` (Python).
+3.  **Tiered Evaluation:**
+    *   **Marginal Confidence ($0.50 \le CS < 0.75$):** Triggers **Query Rewriting**. The system uses a "Query-to-Query" LLM prompt to expand abbreviations or clarify technical terms, then retries retrieval.
+    *   **Low Confidence ($0.35 \le CS < 0.50$) or Failed Rewrite:** Triggers **Cross-Encoder Re-ranking**. Top chunks from combined retrieval attempts are passed through a Cross-Encoder to identify relevant context.
+    *   **Terminal Low Confidence ($CS < 0.35$) or Failed Re-ranking:** Triggers **Clarifying Question**. The system aborts generation to prevent hallucination and asks the user for clarification.
+4.  **Final Evaluation:** If confidence remains below 0.50 after re-ranking, the system aborts generation and escalates to a clarifying question (Python).
+5.  **Handoff:** Return answer (or clarification question) + the complete `reasoningTrace` containing the list of `ReasoningStepDto` objects (Python → Spring Boot → React).
 
 ---
 
@@ -70,11 +78,11 @@ graph TD
 
 This flow details how the UI surfaces the "System Thoughts" to the user to build trust.
 
-1.  **Data Reception:** React receives the payload containing the `reasoning_trace` array.
-2.  **Visual Trigger:** If `reasoning_trace` is non-empty, a "System Thought" toggle appears below the chat bubble (React).
+1.  **Data Reception:** React receives the payload containing the `reasoningTrace` array.
+2.  **Visual Trigger:** If `reasoningTrace` is non-empty, a "System Thought" toggle appears below the chat bubble (React).
 3.  **Step Rendering:** User clicks "View Reasoning"; the UI renders a vertical timeline of the self-correction steps (React):
-    *   **Step 1:** "Initial search for 'spring ddl' yielded low confidence (0.35)."
+    *   **Step 1:** "Initial search for 'spring ddl' yielded marginal confidence (0.58)."
     *   **Step 2:** "Rewriting query to 'Spring Boot Hibernate DDL auto configuration keys'..."
-    *   **Step 3:** "Secondary search improved confidence to 0.52."
-    *   **Step 4:** "Re-ranking 10 documents to find exact match..."
+    *   **Step 3:** "Secondary search failed to reach high confidence (0.48)."
+    *   **Step 4:** "Re-ranking top chunks using Cross-Encoder to recover relevance (0.65)."
 4.  **Transparency:** The UI explicitly highlights which chunk was chosen by BM25 (Exact Match) vs. Vector (Semantic), showing the user why the hybrid approach was necessary (React).
