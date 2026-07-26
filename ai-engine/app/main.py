@@ -7,6 +7,7 @@ from app.config import settings
 from app.database import get_db
 from app.services.ingestion import PDFExtractor, DocumentChunker
 from app.services.vector_store import EmbeddingService, VectorStoreService
+from app.services.retrieval import RetrievalService
 
 app = FastAPI(title=settings.app_name)
 
@@ -73,3 +74,43 @@ def ingest_document(request: IngestRequest, db: Session = Depends(get_db)):
             "vectorIndexName": "",
             "processingTimeMs": processing_time_ms
         }
+
+class RetrievalRequest(BaseModel):
+    documentId: UUID
+    query: str
+    limit: int = 5
+    alpha: float = 0.7
+
+@app.post("/internal/v1/process-base")
+def process_base_retrieval(
+    request: RetrievalRequest,
+    db: Session = Depends(get_db)
+):
+    try:
+        retrieval_service = RetrievalService(db, embedding_service)
+        results = retrieval_service.retrieve_hybrid(
+            document_id=request.documentId,
+            query=request.query,
+            limit=request.limit,
+            alpha=request.alpha
+        )
+        
+        matches = []
+        for chunk, score in results:
+            matches.append({
+                "id": str(chunk.id),
+                "documentId": str(chunk.document_id),
+                "chunkIndex": chunk.chunk_index,
+                "content": chunk.content,
+                "metadata": chunk.chunk_metadata,
+                "score": score
+            })
+            
+        return {
+            "documentId": request.documentId,
+            "query": request.query,
+            "matches": matches
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
