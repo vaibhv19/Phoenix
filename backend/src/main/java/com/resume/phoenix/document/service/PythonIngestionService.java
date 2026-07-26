@@ -17,12 +17,13 @@ import org.springframework.web.client.RestClient;
 @Slf4j
 public class PythonIngestionService {
 
-    private final RestClient restClient;
+    private final RestClient.Builder restClientBuilder;
     private final DocumentRepository documentRepository;
 
     @Async
     public void triggerIngestionAsync(Document document) {
         log.info("Triggering async ingestion for document: {}", document.getId());
+        RestClient restClient = restClientBuilder.build();
 
         IngestRequest.IngestConfig config = IngestRequest.IngestConfig.builder()
                 .chunkSize(1000)

@@ -13,14 +13,13 @@ public class RestClientConfig {
     private String pythonAiEngineUrl;
 
     @Bean
-    public RestClient restClient() {
+    public RestClient.Builder restClientBuilder() {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(5000);
         requestFactory.setReadTimeout(60000);
 
         return RestClient.builder()
                 .baseUrl(pythonAiEngineUrl)
-                .requestFactory(requestFactory)
-                .build();
+                .requestFactory(requestFactory);
     }
 }
