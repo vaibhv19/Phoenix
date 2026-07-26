@@ -49,6 +49,15 @@ This document defines the two distinct API contracts for the **Phoenix** system:
 }
 ```
 
+**`ReasoningStepDto`**:
+```json
+{
+  "step": "string (Stage of retrieval lifecycle, e.g., 'INITIAL_RETRIEVAL', 'FALLBACK_REWRITE', 'FALLBACK_RERANK', 'FALLBACK_CLARIFY')",
+  "action": "string (The system operation performed, e.g., 'Query rewriting using HyDE-light')",
+  "outcome": "string (The result or metrics of the step, e.g., 'Expanded query to: Spring Boot DDL auto config')"
+}
+```
+
 **`ChatResponse`**:
 ```json
 {
@@ -70,11 +79,11 @@ This document defines the two distinct API contracts for the **Phoenix** system:
       "outcome": "Low confidence (0.32) detected"
     },
     {
-      "step": "FALLBACK_STRATEGY",
+      "step": "FALLBACK_REWRITE",
       "action": "Query rewriting",
       "outcome": "Expanded query to: 'Spring Boot DDL auto config'"
     }
-  ]
+  ] // Serialized array of ReasoningStepDto objects
 }
 ```
 
