@@ -42,13 +42,13 @@ The `document_chunks` table in PostgreSQL is designed to support both vector sim
 
 ## 4. Hybrid Search: Weighted Linear Combination (WLC)
 
-Phoenix uses **Weighted Linear Combination** to fuse semantic and keyword results. This is chosen over Reciprocal Rank Fusion (RRF) to allow for intentional "technical boosting."
+Phoenix uses **Weighted Linear Combination (WLC)** to fuse semantic and keyword results. Reciprocal Rank Fusion (RRF) was considered and rejected because it operates purely on rank positions ($1 / (k + r)$) rather than raw similarity scores, which discards the exact-term-matching signal intensity that this project needs for technical document accuracy.
 
 **The Formula:**
 $$Score_{final} = \alpha \cdot Sim_{vector} + (1 - \alpha) \cdot Score_{bm25\_norm}$$
 
-*   **$\alpha$ (Alpha):** Set to `0.7` by default. 
-*   **Normalization:** Since BM25 scores are unbounded, they are normalized using Min-Max scaling across the top $K$ results before fusion.
+*   **$\alpha$ (Alpha):** Set to `0.7` by default.
+*   **Normalization (MinMaxScaler):** Since BM25 raw scores are unbounded ($[0, \infty)$) and vector similarity scores (cosine similarity) are bounded within $[0, 1]$, the Python AI engine must apply an explicit Min-Max normalization (`MinMaxScaler`) on raw BM25 scores per query batch to scale them to the $[0, 1]$ range before applying the fusion weighting formula. Without this MinMaxScaler step, the unbounded BM25 scores would dominate the bounded vector similarity scores, making the weighted fusion mathematically meaningless.
 *   **Tradeoff:** A high $\alpha$ prioritizes conceptual understanding (Vector), while a lower $\alpha$ prioritizes exact technical property matches (BM25).
 
 ## 5. Confidence Scoring Model
