@@ -72,10 +72,11 @@ Phoenix requires a distinct identity from standard "SaaS Blue." Below are three 
 ## 4. Component Patterns
 
 ### 4.1 Confidence Badges
-Confidence is mapped to a "Health Meter" pattern rather than just a number:
-*   **High (> 0.75):** Solid border, checkmark icon.
-*   **Medium (0.50 - 0.75):** Dotted border, "Optimized" icon.
-*   **Low (< 0.50):** Pulsing amber border, "Manual Review Suggested" icon.
+Confidence is mapped to a "Health Meter" pattern with four tiers:
+*   **Green (> 0.75):** Solid green border, checkmark icon (Direct Answer).
+*   **Yellow (0.50 - 0.75):** Dotted yellow border, "Optimized" icon (Query Rewriting).
+*   **Orange (0.35 - 0.50):** Pulsing orange border, "Re-ranked" icon (Cross-Encoder Re-ranking).
+*   **Red (< 0.35):** Solid red border, warning icon (Clarification Prompt).
 
 ### 4.2 Technical Citations
 Instead of simple numbers like `[1]`, Phoenix uses **Contextual Tags**:
