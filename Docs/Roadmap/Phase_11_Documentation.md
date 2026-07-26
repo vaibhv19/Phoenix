@@ -40,27 +40,34 @@ phoenix/                             # Monorepo Root
     │   ├── Phase_01_Project_Setup.md
     │   ├── ...
     │   └── Phase_11_Documentation.md
-    └── Learning/                    # Interview preparation and study guides
-        └── Interview_Study_Notes.md # Deep-dive study notes for interview preparation
+        └── Learning/                    # Living engineering knowledge base
+            ├── README.md                # Map of the knowledge base and navigation guide
+            ├── Backend/                 # Spring Boot implementation deep-dives
+            ├── Frontend/                # React/Vite/Zustand client features
+            ├── AI/                      # FastAPI, chunks, embeddings, LLM & LangGraph details
+            ├── Infrastructure/          # Docker Compose, PostgreSQL & Redis setups
+            └── Architecture/            # Decoupled architecture decisions & data lifecycles
 ```
 
 ---
 
-## 3. Study Guide Deep-Dives
+## 3. Living Engineering Knowledge Base Strategy
 
-### Topics Covered in `Docs/Learning/Interview_Study_Notes.md`:
-1.  **pgvector vs. Vector Stores**:
-    - Relational joins on metadata table contexts.
-    - Simplified backup and deployment footprint.
-    - Transactional ACID guarantees for vector metadata sync.
-2.  **Hybrid Search (WLC + MinMaxScaler)**:
-    - Why RRF fails to capture exact key-term signals.
-    - MinMaxScaler scaling constraints for score combination.
-3.  **Fallback State Machine**:
-    - The 4-tier model design (Green, Yellow, Orange, Red).
-    - Preventing hallucination while maintaining UI-observable transparency.
-4.  **Java/Python decoupling**:
-    - REST communications over service boundary lines.
+To prevent any major part of the codebase from becoming a black box, the project implements an expandable engineering knowledge base.
+
+### The Expandable Documentation Rule
+> Whenever AI creates or heavily influences a non-trivial implementation, architecture decision, integration, configuration, optimization, or design pattern, a corresponding document must be created or updated inside `Docs/Learning/`.
+
+### Learning Document Template
+Each document created inside the knowledge base must follow a standard structure that teaches the implementation:
+- **Problem Statement**: What problem does this solve?
+- **Decision Rationale**: Why was this approach selected?
+- **Alternatives Considered**: Trade-offs of alternative solutions.
+- **Internal Workings**: How the technology/pattern works internally.
+- **Phoenix Implementation**: How Phoenix uses it (with code snippets and explanations).
+- **Key References**: Important classes, packages, files, and official documentation links.
+- **Pitfalls & Troubleshooting**: Common pitfalls and debugging tips.
+- **Interview & Discussion Points**: Expected interview questions and detailed answers.
 
 ---
 
@@ -86,12 +93,12 @@ phoenix/                             # Monorepo Root
   - `ai-engine/README.md`: Document Python FastAPI installation, virtual environment setup, Uvicorn running commands, and integration details.
 - **Definition of Done**: `README.md` files created in `backend/`, `frontend/`, and `ai-engine/` directories, each containing service-specific instructions.
 
-### Task 11.3: Write Interview Study Notes
-- **Estimated Size**: S
+### Task 11.3: Initialize living engineering knowledge base
+- **Estimated Size**: M
 - **Risk**: Low
 - **Prerequisites**: Phase 10
-- **Description**: Create `Docs/Learning/Interview_Study_Notes.md` containing detailed talking points, architectural tradeoff analyses, and hybrid search performance benchmarks.
-- **Definition of Done**: Document compiles, is readable, and covers all four major study topics.
+- **Description**: Initialize the expandable learning documentation system inside `Docs/Learning/`. Create the `README.md` file introducing the knowledge base structure and guidelines. Populate initial deep-dive documents for the core technologies implemented so far (e.g., Flyway, Spring Security, JWT Authentication, and Docker Compose) following the standardized learning template.
+- **Definition of Done**: Directories `Docs/Learning/{Backend,Frontend,AI,Infrastructure,Architecture}/` created, `README.md` maps the layout, and initial core engineering documents are fully written and readable.
 
 ### Task 11.4: Run Final Code Audit Checklist
 - **Estimated Size**: S
