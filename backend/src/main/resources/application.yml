@@ -23,3 +23,10 @@ logging:
     org.springframework: INFO
     org.hibernate.SQL: DEBUG
     org.hibernate.orm.jdbc.bind: TRACE
+
+security:
+  jwt:
+    secret-key: ${JWT_SECRET_KEY:dGhlLXBob2VuaXgtcmFnLWh5YnJpZC1yZXRyaWV2YWwtc3lzdGVtLXNlY3VyZS1rZXktMjAyNg==}
+    expiration-ms: 86400000 # 24 hours
+    refresh-expiration-ms: 604800000 # 7 days
+
