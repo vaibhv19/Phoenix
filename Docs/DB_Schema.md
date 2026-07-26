@@ -89,9 +89,3 @@ This document defines the relational schema for the **Phoenix** Spring Boot API.
 | `confidence_score` | `DECIMAL(3,2)` | | Normalized retrieval confidence (0.00 - 1.00). |
 | `fallback_trace` | `JSONB` | | Detailed log of paths taken (e.g., `["REWRITE", "RERANK"]`). |
 | `created_at` | `TIMESTAMP` | DEFAULT NOW() | Timestamp for history sorting. |
-
----
-**Related Documentation**
-* [Phoenix RAG Architecture](file:///path/to/RAG_Architecture.md) — Vector storage details.
-* [Phoenix API Specification](file:///path/to/API_SPECIFICATION.md) — DTO mappings for these tables.
-* [Trajectory README (Format Reference)](file:///path/to/Trajectory_README.md)

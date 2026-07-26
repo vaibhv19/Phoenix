@@ -147,9 +147,3 @@ This is a private service-to-service contract. Communication is optimized for te
   ]
 }
 ```
-
----
-**Related Documentation**
-* [Phoenix App Flow](file:///path/to/App_Flow.md)
-* [Phoenix Tech Stack](file:///path/to/Tech_Stack.md)
-* [Trajectory API Spec (Format Reference)](file:///path/to/Trajectory_API_SPECIFICATION.md)

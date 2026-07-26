@@ -89,7 +89,3 @@ A core differentiator of Phoenix is making this state machine visible to the use
         *   *"Re-ranked 20 passages to find exact technical match."*
 *   **User Benefit:** This builds "Calibrated Trust." The user knows exactly when the system is confident and when it had to work harder to find the answer, reducing the risk of them blindly following a potentially incorrect response.
 
----
-**Related Documentation**
-* [Phoenix RAG Architecture](file:///path/to/RAG_Architecture.md)
-* [Phoenix API Specification](file:///path/to/API_SPECIFICATION.md)

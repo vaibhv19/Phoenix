@@ -84,8 +84,3 @@ Instead of simple numbers like `[1]`, Phoenix uses **Contextual Tags**:
 ### 4.3 Loading States: "The Thinking Pulse"
 Standard spinners are banned. While the AI Engine is working, the UI should render a **Stream of Tokens** or a "Scanned Chunks" counter that increments rapidly, showing the user the system is actively searching the vector space.
 
----
-**Related Documentation**
-* [Phoenix PRD](file:///path/to/PRD.md)
-* [Phoenix Fallback Strategies](file:///path/to/Fallback_Strategies.md)
-* [Trajectory DESIGN.md (Format Reference)](file:///path/to/Trajectory_DESIGN.md)
