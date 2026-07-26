@@ -1,6 +1,6 @@
 {
-  "venvPath": "ai-engine",
-  "venv": ".venv",
+  "venvPath": ".",
+  "venv": "ai-engine/.venv",
   "extraPaths": [
     "ai-engine"
   ],
