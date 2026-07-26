@@ -87,5 +87,5 @@ This document defines the relational schema for the **Phoenix** Spring Boot API.
 | `question` | `TEXT` | NOT NULL | The raw user input. |
 | `answer` | `TEXT` | | The LLM-generated response. |
 | `confidence_score` | `DECIMAL(3,2)` | | Normalized retrieval confidence (0.00 - 1.00). |
-| `fallback_trace` | `JSONB` | | Detailed log of paths taken (e.g., `["REWRITE", "RERANK"]`). |
+| `fallback_trace` | `JSONB` | | Stores a serialized JSON array of `ReasoningStepDto` objects, mapped in Spring Boot/Hibernate via Jackson (e.g., using `@Type(JsonType.class)`). |
 | `created_at` | `TIMESTAMP` | DEFAULT NOW() | Timestamp for history sorting. |
