@@ -234,11 +234,3 @@ The following enhancements are proposed for future development cycles:
 - [ ] **Distributed Vector Stores**: Integrate external vector services (like pgvector cluster nodes) for massive document scaling.
 
 ---
-
-## Demo & Deployment
-
-> [!TIP]
-> *Production deployment links and system walk-through videos will be added here once the staging pipeline is initialized.*
-
-- **Live Staging Application**: `[Staging URL Placeholder]`
-- **Video Walkthrough**: `[YouTube Demonstration Placeholder]`
