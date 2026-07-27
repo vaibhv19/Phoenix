@@ -8,11 +8,16 @@ from app.database import get_db
 from app.services.ingestion import PDFExtractor, DocumentChunker
 from app.services.vector_store import EmbeddingService, VectorStoreService
 from app.services.retrieval import RetrievalService
+from app.services.fallback import FallbackOrchestrator
+from app.services.llm import LLMService
+from app.services.reranking import RerankingService
 
 app = FastAPI(title=settings.app_name)
 
-# Initialize embedding service singleton at startup
+# Initialize singletons at startup
 embedding_service = EmbeddingService()
+llm_service = LLMService(provider="mock")
+reranking_service = RerankingService(provider="mock")
 
 class IngestConfig(BaseModel):
     chunkSize: int
@@ -114,4 +119,56 @@ def process_base_retrieval(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+class ProcessRequest(BaseModel):
+    documentId: UUID
+    query: str
+    limit: int = 5
+    alpha: float = 0.7
+
+@app.post("/internal/v1/process")
+def process_retrieval_flow(
+    request: ProcessRequest,
+    db: Session = Depends(get_db)
+):
+    try:
+        retrieval_service = RetrievalService(db, embedding_service)
+        orchestrator = FallbackOrchestrator(retrieval_service, llm_service, reranking_service)
+        
+        result = orchestrator.process_query(
+            document_id=request.documentId,
+            query=request.query,
+            limit=request.limit,
+            alpha=request.alpha
+        )
+        
+        matches = []
+        for chunk, score in result["matches"]:
+            matches.append({
+                "id": str(chunk.id),
+                "documentId": str(chunk.document_id),
+                "chunkIndex": chunk.chunk_index,
+                "content": chunk.content,
+                "metadata": chunk.chunk_metadata,
+                "score": score
+            })
+            
+        return {
+            "documentId": request.documentId,
+            "query": request.query,
+            "answer": result["answer"],
+            "confidenceScore": result["confidenceScore"],
+            "reasoningTrace": [
+                {
+                    "state": step.state,
+                    "confidenceScore": step.confidenceScore,
+                    "description": step.description
+                }
+                for step in result["reasoningTrace"]
+            ],
+            "matches": matches
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
