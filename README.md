@@ -36,3 +36,18 @@ sequenceDiagram
     RetrievalService -->> FastAPI Endpoint: Top K matches
     FastAPI Endpoint -->> Client: JSON Response (matches, scores)
 ```
+
+## Confidence Scoring Engine Dependency Graph
+
+This diagram shows the dependencies between the confidence services and the retrieval coordinator:
+
+```mermaid
+graph TD
+    VectorSearchService --> RetrievalService
+    KeywordSearchService --> RetrievalService
+    ConfidenceService --> RetrievalService
+    MaxSimExtractor --> ConfidenceService
+    AgreementCalculator --> ConfidenceService
+    RetrievalService --> FastAPI_Endpoint[FastAPI Endpoint /internal/v1/process-base]
+```
+
