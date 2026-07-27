@@ -146,3 +146,67 @@ def test_process_endpoint_success(mock_process):
     assert data["reasoningTrace"][0]["state"] == "INITIAL_RETRIEVAL"
     assert len(data["matches"]) == 1
     assert data["matches"][0]["content"] == "API content"
+
+@patch("app.services.fallback.VectorSearchService.search")
+@patch("app.services.fallback.KeywordSearchService.search")
+@patch("app.services.fallback.WLCFusion.fuse")
+def test_orchestrator_yellow_path_escalates_to_orange(
+    mock_fuse, mock_keyword, mock_vector,
+    mock_retrieval_service, mock_llm_service, mock_reranking_service
+):
+    doc_id = uuid.uuid4()
+    chunk = DocumentChunk(id=uuid.uuid4(), content="Escalated Orange content")
+    
+    # cs_1 = 0.60 (yellow), cs_2 = 0.40 (orange/escalated)
+    mock_retrieval_service.retrieve_hybrid.side_effect = [
+        ([], 0.60),
+        ([], 0.40)
+    ]
+    
+    mock_vector.return_value = []
+    mock_keyword.return_value = []
+    mock_fuse.return_value = [(chunk, 0.40)]
+    mock_reranking_service.rerank.return_value = [(chunk, 0.55)]
+    
+    orchestrator = FallbackOrchestrator(mock_retrieval_service, mock_llm_service, mock_reranking_service)
+    result = orchestrator.process_query(doc_id, "Test query")
+    
+    assert result["confidenceScore"] == 0.55
+    assert len(result["reasoningTrace"]) == 5
+    assert result["reasoningTrace"][0].state == "INITIAL_RETRIEVAL"
+    assert result["reasoningTrace"][1].state == "FALLBACK_REWRITE"
+    assert result["reasoningTrace"][2].state == "ESCALATION"
+    assert result["reasoningTrace"][3].state == "RERANK_EVALUATION"
+    assert result["reasoningTrace"][4].state == "ANSWER_GENERATION"
+    assert len(result["matches"]) == 1
+
+@patch("app.services.fallback.VectorSearchService.search")
+@patch("app.services.fallback.KeywordSearchService.search")
+@patch("app.services.fallback.WLCFusion.fuse")
+def test_orchestrator_orange_path_escalates_to_red(
+    mock_fuse, mock_keyword, mock_vector,
+    mock_retrieval_service, mock_llm_service, mock_reranking_service
+):
+    doc_id = uuid.uuid4()
+    chunk = DocumentChunk(id=uuid.uuid4(), content="Low rerank content")
+    
+    # cs_1 = 0.45 (orange)
+    mock_retrieval_service.retrieve_hybrid.return_value = ([], 0.45)
+    
+    mock_vector.return_value = [(chunk, 0.30)]
+    mock_keyword.return_value = []
+    mock_fuse.return_value = [(chunk, 0.45)]
+    mock_reranking_service.rerank.return_value = [(chunk, 0.30)] # rs = 0.30 (red/escalated)
+    
+    orchestrator = FallbackOrchestrator(mock_retrieval_service, mock_llm_service, mock_reranking_service)
+    result = orchestrator.process_query(doc_id, "Test query")
+    
+    assert result["confidenceScore"] == 0.30
+    assert result["answer"] == "Mocked Clarification Question"
+    assert len(result["reasoningTrace"]) == 5
+    assert result["reasoningTrace"][0].state == "INITIAL_RETRIEVAL"
+    assert result["reasoningTrace"][1].state == "FALLBACK_RERANK"
+    assert result["reasoningTrace"][2].state == "RERANK_EVALUATION"
+    assert result["reasoningTrace"][3].state == "ESCALATION"
+    assert result["reasoningTrace"][4].state == "CLARIFICATION_GENERATION"
+    assert len(result["matches"]) == 0
