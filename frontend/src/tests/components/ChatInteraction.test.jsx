@@ -29,6 +29,7 @@ describe('ChatContainer Component tests', () => {
   const defaultStoreState = {
     activeProject: { id: 'proj-123', name: 'Phoenix Test App' },
     messages: [],
+    documents: [],
     queryRAG: mockQueryRAG,
     isQuerying: false,
     clearChat: mockClearChat,
@@ -61,14 +62,14 @@ describe('ChatContainer Component tests', () => {
     render(<ChatContainer />)
 
     expect(screen.getByText('Phoenix Test App')).toBeInTheDocument()
-    expect(screen.getByText('Start a RAG Conversation')).toBeInTheDocument()
-    expect(screen.getByText('Deployment Replicas')).toBeInTheDocument()
-    expect(screen.getByText('Gateway Limits')).toBeInTheDocument()
-    expect(screen.getByText('Web CORS Settings')).toBeInTheDocument()
-    expect(screen.getByText('Irrelevant Query')).toBeInTheDocument()
+    expect(screen.getByText('Workspace Diagnostic Summary')).toBeInTheDocument()
+    expect(screen.getByText('Verify deployment.yaml replicas config')).toBeInTheDocument()
+    expect(screen.getByText('Optimize gateway rate limits rules')).toBeInTheDocument()
+    expect(screen.getByText('Rerank CORS configuration in WebConfig')).toBeInTheDocument()
+    expect(screen.getByText('What is the meaning of life')).toBeInTheDocument()
 
     // Test suggestion button click
-    const suggestionBtn = screen.getByText('Deployment Replicas').closest('button')
+    const suggestionBtn = screen.getByText('Verify deployment.yaml replicas config').closest('button')
     fireEvent.click(suggestionBtn)
     expect(mockQueryRAG).toHaveBeenCalledWith('Verify deployment.yaml replicas config')
   })

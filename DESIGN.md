@@ -12,7 +12,7 @@ Phoenix rejects flashy, neon, and illustrative chatbot dashboards. The interface
 *   **Calm & Restrained Surface**: The interface uses a neutral color palette. Backgrounds are deep charcoal and solid zinc; borders are low-contrast lines; and margins are compact.
 *   **Density & Screen Utility**: Gaps and excessive whitespace are reduced. Screen area is maximized for document inspection, markdown answers, and technical matrices.
 *   **Evidence & Citations First**: The system emphasizes citations. Source files, page numbers, and exact code chunks are prioritized over decorative chatbot borders.
-*   **Minimal Interaction Overhead**: Animations are subtle (opacity fades or slight transitions); no bouncy, scaling, or floating effects are allowed.
+*   **Muted Interaction**: Animations are subtle (opacity fades or slight transitions); no bouncy, scaling, or floating effects are allowed.
 
 ---
 

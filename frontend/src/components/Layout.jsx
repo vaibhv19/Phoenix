@@ -31,57 +31,57 @@ export default function Layout({ children }) {
   }
 
   return (
-    <div className="flex h-screen bg-[#0B0F19] text-[#F8FAFC] overflow-hidden font-sans">
+    <div className="flex h-screen bg-[#09090b] text-[#f4f4f5] overflow-hidden font-sans">
       {/* Sidebar */}
-      <aside className={`bg-[#0F172A] border-r border-gray-800 flex flex-col justify-between transition-all duration-300 z-30 ${isSidebarOpen ? 'w-64' : 'w-20'}`}>
+      <aside className={`bg-[#0c0c0e] border-r border-zinc-800 flex flex-col justify-between transition-all duration-200 z-30 ${isSidebarOpen ? 'w-60' : 'w-16'}`}>
         <div>
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-800">
+          <div className="flex items-center justify-between p-3 border-b border-zinc-800">
             {isSidebarOpen ? (
-              <div className="flex items-center space-x-3">
-                <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/20">
+              <div className="flex items-center space-x-2.5">
+                <div className="h-7 w-7 rounded border border-zinc-700 bg-zinc-800/50 flex items-center justify-center font-bold text-xs text-zinc-300">
                   P
                 </div>
                 <div>
-                  <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-                    Phoenix
+                  <h1 className="text-sm font-semibold tracking-tight text-zinc-200">
+                    Phoenix Workspace
                   </h1>
                 </div>
               </div>
             ) : (
-              <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white mx-auto shadow-lg">
+              <div className="h-7 w-7 rounded border border-zinc-700 bg-zinc-800/50 flex items-center justify-center font-bold text-xs text-zinc-300 mx-auto">
                 P
               </div>
             )}
             
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-              className="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-800 transition"
+              className="text-zinc-500 hover:text-zinc-200 p-1 rounded hover:bg-zinc-900 transition"
             >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
           </div>
 
           {/* Project Switcher */}
-          <div className="p-4 border-b border-gray-800">
+          <div className="p-3 border-b border-zinc-800">
             {isSidebarOpen ? (
-              <div className="space-y-2">
-                <div className="flex justify-between items-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
                   <span>Projects</span>
                   <button 
                     onClick={() => setShowNewProjModal(true)} 
-                    className="text-blue-400 hover:text-blue-300 font-bold text-lg p-0.5 leading-none transition"
+                    className="text-blue-500 hover:text-blue-400 font-medium text-sm px-1.5 py-0.5 rounded hover:bg-zinc-800 transition"
                   >
-                    +
+                    + New
                   </button>
                 </div>
                 
                 {projects.length === 0 ? (
                   <button 
                     onClick={() => setShowNewProjModal(true)} 
-                    className="w-full text-left text-xs bg-gray-800/40 border border-gray-850 p-2.5 rounded-xl text-gray-400 hover:border-gray-700 transition"
+                    className="w-full text-left text-xs bg-zinc-900/40 border border-zinc-800 p-2 rounded text-zinc-400 hover:border-zinc-700 transition"
                   >
                     + Create a Project
                   </button>
@@ -92,7 +92,7 @@ export default function Layout({ children }) {
                       const proj = projects.find(p => p.id === e.target.value)
                       if (proj) setActiveProject(proj)
                     }}
-                    className="w-full bg-[#1E293B] border border-gray-800 text-gray-200 text-sm rounded-xl px-3 py-2.5 outline-none focus:border-blue-500/50 transition cursor-pointer"
+                    className="w-full bg-[#161618] border border-zinc-800 text-zinc-300 text-xs rounded px-2.5 py-2 outline-none focus:border-zinc-700 transition cursor-pointer"
                   >
                     {projects.map(p => (
                       <option key={p.id} value={p.id}>{p.name}</option>
@@ -103,7 +103,7 @@ export default function Layout({ children }) {
             ) : (
               <button 
                 onClick={() => setShowNewProjModal(true)} 
-                className="h-10 w-10 bg-[#1E293B] hover:bg-gray-800 rounded-xl flex items-center justify-center text-gray-400 hover:text-white mx-auto transition"
+                className="h-8 w-8 bg-[#161618] border border-zinc-800 hover:bg-zinc-800 rounded flex items-center justify-center text-zinc-400 hover:text-zinc-200 mx-auto transition text-sm"
               >
                 +
               </button>
@@ -111,22 +111,22 @@ export default function Layout({ children }) {
           </div>
 
           {/* Navigation Views */}
-          <nav className="p-3 space-y-1.5">
+          <nav className="p-2 space-y-1">
             <button 
               onClick={() => setView('chat')}
-              className={`w-full flex items-center rounded-xl p-3 text-sm font-medium transition duration-200 group ${activeView === 'chat' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/10' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}`}
+              className={`w-full flex items-center rounded p-2.5 text-xs font-medium transition duration-150 group ${activeView === 'chat' ? 'bg-[#161618] border border-zinc-800 text-zinc-200' : 'text-zinc-400 border border-transparent hover:text-zinc-200 hover:bg-zinc-900/60'}`}
             >
-              <svg className={`h-5 w-5 ${isSidebarOpen ? 'mr-3' : 'mx-auto'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className={`h-4 w-4 ${isSidebarOpen ? 'mr-2.5' : 'mx-auto'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
-              {isSidebarOpen && <span>Conversation Console</span>}
+              {isSidebarOpen && <span>Investigation Console</span>}
             </button>
 
             <button 
               onClick={() => setView('vault')}
-              className={`w-full flex items-center rounded-xl p-3 text-sm font-medium transition duration-200 group ${activeView === 'vault' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/10' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}`}
+              className={`w-full flex items-center rounded p-2.5 text-xs font-medium transition duration-150 group ${activeView === 'vault' ? 'bg-[#161618] border border-zinc-800 text-zinc-200' : 'text-zinc-400 border border-transparent hover:text-zinc-200 hover:bg-zinc-900/60'}`}
             >
-              <svg className={`h-5 w-5 ${isSidebarOpen ? 'mr-3' : 'mx-auto'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className={`h-4 w-4 ${isSidebarOpen ? 'mr-2.5' : 'mx-auto'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
               </svg>
               {isSidebarOpen && <span>Document Vault</span>}
@@ -135,24 +135,24 @@ export default function Layout({ children }) {
         </div>
 
         {/* Footer / User Profile & Logout */}
-        <div className="p-4 border-t border-gray-800 bg-[#0B0F19]/40 flex flex-col items-center">
+        <div className="p-3 border-t border-zinc-800 bg-zinc-950/40 flex flex-col items-center">
           {isSidebarOpen ? (
             <div className="w-full flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-xs text-white">
+              <div className="flex items-center space-x-2 truncate">
+                <div className="h-7 w-7 rounded border border-zinc-700 bg-zinc-800 flex items-center justify-center font-semibold text-[10px] text-zinc-300 shrink-0">
                   {user?.username?.substring(0, 2).toUpperCase() || 'US'}
                 </div>
-                <div className="truncate max-w-[120px]">
-                  <p className="text-xs font-semibold text-gray-200 truncate">{user?.username || 'User'}</p>
-                  <p className="text-[10px] text-gray-400 truncate">{user?.email || 'authenticated'}</p>
+                <div className="truncate max-w-[100px]">
+                  <p className="text-xs font-medium text-zinc-250 truncate">{user?.username || 'User'}</p>
+                  <p className="text-[9px] text-zinc-500 truncate">{user?.email || 'authenticated'}</p>
                 </div>
               </div>
               <button 
                 onClick={logout}
-                className="text-gray-400 hover:text-red-400 p-1.5 rounded-lg hover:bg-gray-800 transition"
+                className="text-zinc-500 hover:text-red-400 p-1.5 rounded hover:bg-zinc-900 transition"
                 title="Logout"
               >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
               </button>
@@ -160,10 +160,10 @@ export default function Layout({ children }) {
           ) : (
             <button 
               onClick={logout}
-              className="h-10 w-10 bg-gray-850 hover:bg-red-500/10 rounded-xl flex items-center justify-center text-gray-400 hover:text-red-400 mx-auto transition"
+              className="h-8 w-8 bg-zinc-900 border border-zinc-800 hover:bg-red-950/20 rounded flex items-center justify-center text-zinc-500 hover:text-red-400 mx-auto transition"
               title="Logout"
             >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
             </button>
@@ -178,38 +178,38 @@ export default function Layout({ children }) {
 
       {/* New Project Modal */}
       {showNewProjModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#0F172A] border border-gray-800 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-fade-in">
-            <h3 className="text-lg font-bold mb-4 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0c0c0e] border border-zinc-800 rounded-lg w-full max-w-sm p-5 shadow-2xl animate-fade-in">
+            <h3 className="text-sm font-bold mb-3 text-zinc-200">
               Create New Project
             </h3>
-            <form onSubmit={handleCreateProject} className="space-y-4">
+            <form onSubmit={handleCreateProject} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Project Name</label>
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Project Name</label>
                 <input 
                   type="text" 
                   value={newProjName}
                   onChange={(e) => setNewProjName(e.target.value)}
                   placeholder="e.g. Gateway Service Auth v2"
-                  className="w-full bg-[#1E293B] border border-gray-800 rounded-xl px-4 py-3 text-sm text-gray-200 placeholder-gray-500 outline-none focus:border-blue-500/50 transition"
+                  className="w-full bg-[#161618] border border-zinc-800 rounded px-3 py-2 text-xs text-zinc-200 placeholder-zinc-600 outline-none focus:border-blue-500/40 transition"
                   autoFocus
                 />
               </div>
               
-              <div className="flex space-x-3 justify-end pt-2">
+              <div className="flex space-x-2.5 justify-end pt-1">
                 <button 
                   type="button" 
                   onClick={() => {
                     setShowNewProjModal(false)
                     setNewProjName('')
                   }}
-                  className="px-4 py-2 text-xs font-semibold text-gray-400 hover:text-white transition"
+                  className="px-3.5 py-1.5 text-xs text-zinc-400 hover:text-zinc-250 transition"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
-                  className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-blue-500/10 transition"
+                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded shadow transition"
                 >
                   Create Project
                 </button>

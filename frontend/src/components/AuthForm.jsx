@@ -34,29 +34,26 @@ export default function AuthForm() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0F19] text-[#F8FAFC] flex items-center justify-center p-6 relative overflow-hidden font-sans">
-      <div className="absolute top-1/4 left-1/4 h-72 w-72 bg-blue-500/10 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-1/4 right-1/4 h-80 w-80 bg-indigo-500/10 rounded-full blur-3xl"></div>
-
-      <div className="w-full max-w-md z-10">
-        <div className="flex flex-col items-center mb-8">
-          <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center font-extrabold text-2xl text-white shadow-xl shadow-blue-500/20 mb-3">
+    <div className="min-h-screen bg-[#09090b] text-[#f4f4f5] flex items-center justify-center p-4 relative overflow-hidden font-sans">
+      <div className="w-full max-w-sm z-10">
+        <div className="flex flex-col items-center mb-6">
+          <div className="h-9 w-9 rounded border border-zinc-700 bg-zinc-800/50 flex items-center justify-center font-bold text-sm text-zinc-300 mb-2.5">
             P
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+          <h1 className="text-xl font-bold tracking-tight text-zinc-200">
             Phoenix Platform
           </h1>
-          <p className="text-xs text-gray-400 mt-1.5">Hybrid RAG Knowledge Retrieval System</p>
+          <p className="text-xs text-zinc-500 mt-1">Hybrid RAG Knowledge Retrieval System</p>
         </div>
 
-        <div className="glass-panel border border-gray-800 rounded-3xl p-8 shadow-2xl relative">
-          <div className="flex bg-[#0F172A]/80 border border-gray-850 p-1.5 rounded-xl mb-6">
+        <div className="glass-panel border border-zinc-800 rounded-lg p-6 shadow-xl relative">
+          <div className="flex bg-[#0c0c0e] border border-zinc-800 p-1 rounded mb-5">
             <button 
               onClick={() => {
                 setIsLoginTab(true)
                 setLocalError('')
               }}
-              className={`flex-1 text-center py-2.5 rounded-lg text-xs font-semibold tracking-wide uppercase transition duration-200 ${isLoginTab ? 'bg-[#1E293B] text-white shadow-sm' : 'text-gray-400 hover:text-gray-200'}`}
+              className={`flex-1 text-center py-2 rounded text-xs font-semibold tracking-wide uppercase transition duration-150 ${isLoginTab ? 'bg-[#161618] text-zinc-100 border border-zinc-800 shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
             >
               Sign In
             </button>
@@ -65,7 +62,7 @@ export default function AuthForm() {
                 setIsLoginTab(false)
                 setLocalError('')
               }}
-              className={`flex-1 text-center py-2.5 rounded-lg text-xs font-semibold tracking-wide uppercase transition duration-200 ${!isLoginTab ? 'bg-[#1E293B] text-white shadow-sm' : 'text-gray-400 hover:text-gray-200'}`}
+              className={`flex-1 text-center py-2 rounded text-xs font-semibold tracking-wide uppercase transition duration-150 ${!isLoginTab ? 'bg-[#161618] text-zinc-100 border border-zinc-800 shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
             >
               Register
             </button>
@@ -73,42 +70,42 @@ export default function AuthForm() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Username</label>
+              <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Username</label>
               <input 
                 type="text" 
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="developer"
-                className="w-full bg-[#1E293B] border border-gray-800 rounded-xl px-4 py-3 text-sm text-gray-200 placeholder-gray-500 outline-none focus:border-blue-500/50 transition"
+                className="w-full bg-[#161618] border border-zinc-800 rounded px-3 py-2 text-xs text-zinc-200 placeholder-zinc-650 outline-none focus:border-zinc-700 transition"
               />
             </div>
 
             {!isLoginTab && (
               <div>
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Email Address</label>
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Email Address</label>
                 <input 
                   type="email" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="dev@phoenix.io"
-                  className="w-full bg-[#1E293B] border border-gray-800 rounded-xl px-4 py-3 text-sm text-gray-200 placeholder-gray-500 outline-none focus:border-blue-500/50 transition"
+                  className="w-full bg-[#161618] border border-zinc-800 rounded px-3 py-2 text-xs text-zinc-200 placeholder-zinc-650 outline-none focus:border-zinc-700 transition"
                 />
               </div>
             )}
 
             <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Password</label>
+              <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Password</label>
               <input 
                 type="password" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-[#1E293B] border border-gray-800 rounded-xl px-4 py-3 text-sm text-gray-200 placeholder-gray-500 outline-none focus:border-blue-500/50 transition"
+                className="w-full bg-[#161618] border border-zinc-800 rounded px-3 py-2 text-xs text-zinc-200 placeholder-zinc-650 outline-none focus:border-zinc-700 transition"
               />
             </div>
 
             {(localError || error) && (
-              <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-3.5 py-2.5 rounded-xl">
+              <div className="text-xs text-red-400 bg-red-950/20 border border-red-900/30 px-3 py-2 rounded">
                 {localError || error}
               </div>
             )}
@@ -116,7 +113,7 @@ export default function AuthForm() {
             <button 
               type="submit" 
               disabled={isAuthLoading}
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold uppercase tracking-wider py-3.5 px-4 rounded-xl shadow-lg shadow-blue-500/10 transition-all duration-300 flex items-center justify-center space-x-2"
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold uppercase tracking-wider py-2.5 px-4 rounded shadow transition-colors flex items-center justify-center space-x-2"
             >
               {isAuthLoading ? (
                 <span>Loading Account...</span>

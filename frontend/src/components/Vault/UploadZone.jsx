@@ -49,7 +49,7 @@ export default function UploadZone() {
       onDragLeave={handleDrag}
       onDrop={handleDrop}
       onClick={() => fileInputRef.current?.click()}
-      className={`glass-panel border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-300 flex flex-col items-center justify-center min-h-[220px] ${isDragActive ? 'border-blue-500 bg-blue-500/5 shadow-lg shadow-blue-500/5Scale' : 'border-gray-800 hover:border-gray-700 hover:bg-gray-800/10'}`}
+      className={`glass-panel border-2 border-dashed rounded p-6 text-center cursor-pointer transition duration-150 flex flex-col items-center justify-center min-h-[180px] ${isDragActive ? 'border-zinc-500 bg-zinc-900/40' : 'border-zinc-850 bg-zinc-950/20 hover:border-zinc-700 hover:bg-zinc-900/10'}`}
     >
       <input 
         ref={fileInputRef}
@@ -59,16 +59,16 @@ export default function UploadZone() {
         className="hidden"
       />
       
-      <div className="h-12 w-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-4">
-        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="h-9 w-9 rounded border border-zinc-800 bg-[#161618] flex items-center justify-center text-zinc-450 mb-3">
+        <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
         </svg>
       </div>
 
-      <h3 className="text-sm font-bold text-gray-200 mb-1">
+      <h3 className="text-xs font-semibold text-zinc-300 mb-1">
         {isUploading ? 'Uploading Document...' : 'Drag & Drop PDF Document'}
       </h3>
-      <p className="text-xs text-gray-400 max-w-[280px]">
+      <p className="text-[11px] text-zinc-500 max-w-[280px]">
         {isUploading ? 'Sending file to the AI ingestion engine.' : 'Click anywhere to browse. Only PDF manuals are supported.'}
       </p>
     </div>

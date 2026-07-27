@@ -32,13 +32,13 @@ export default function ReasoningTimeline({ steps }) {
   }
 
   const itemVariants = {
-    hidden: { opacity: 0, x: -15 },
-    show: { opacity: 1, x: 0, transition: { type: 'spring', stiffness: 100 } }
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { duration: 0.15 } }
   }
 
   return (
-    <div className="p-4 bg-[#1E293B]/20 border border-gray-800 rounded-xl space-y-4">
-      <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+    <div className="p-3.5 bg-zinc-950/50 border border-zinc-800 rounded space-y-3 font-sans">
+      <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
         Retrieval Logic Execution Trace
       </h4>
 
@@ -46,7 +46,7 @@ export default function ReasoningTimeline({ steps }) {
         variants={containerVariants}
         initial="hidden"
         animate="show"
-        className="relative border-l border-gray-800 pl-4 ml-2 space-y-5"
+        className="relative border-l border-zinc-800 pl-4.5 ml-1.5 space-y-4"
       >
         {steps.map((step, idx) => {
           const config = getStateConfig(step.state)
@@ -56,18 +56,18 @@ export default function ReasoningTimeline({ steps }) {
               variants={itemVariants}
               className="relative group"
             >
-              <span className={`absolute -left-[26px] top-0.5 h-4.5 w-4.5 rounded-full border flex items-center justify-center text-[9px] font-bold ${config.bg}`}>
+              <span className={`absolute -left-[27px] top-0.5 h-4 w-4 rounded-full border flex items-center justify-center text-[9px] font-bold font-mono ${config.bg}`}>
                 {idx + 1}
               </span>
 
               <div className="space-y-0.5">
                 <div className="flex items-center space-x-2">
-                  <span className="text-xs font-bold text-gray-200">{config.label}</span>
-                  <span className="text-[10px] text-gray-500 font-mono">
+                  <span className="text-xs font-semibold text-zinc-200">{config.label}</span>
+                  <span className="text-[10px] text-zinc-500 font-mono">
                     CS: {step.confidenceScore.toFixed(2)}
                   </span>
                 </div>
-                <p className="text-xs text-gray-400 leading-relaxed">
+                <p className="text-xs text-zinc-400 leading-relaxed">
                   {step.description}
                 </p>
               </div>
