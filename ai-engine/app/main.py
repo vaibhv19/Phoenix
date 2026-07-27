@@ -7,12 +7,21 @@ from app.config import settings
 from app.database import get_db
 from app.services.ingestion import PDFExtractor, DocumentChunker
 from app.services.vector_store import EmbeddingService, VectorStoreService
+from fastapi.middleware.cors import CORSMiddleware
 from app.services.retrieval import RetrievalService
 from app.services.fallback import FallbackOrchestrator
 from app.services.llm import LLMService
 from app.services.reranking import RerankingService
 
 app = FastAPI(title=settings.app_name)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Initialize singletons at startup
 embedding_service = EmbeddingService()
