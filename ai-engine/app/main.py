@@ -88,7 +88,7 @@ def process_base_retrieval(
 ):
     try:
         retrieval_service = RetrievalService(db, embedding_service)
-        results = retrieval_service.retrieve_hybrid(
+        results, confidence_score = retrieval_service.retrieve_hybrid(
             document_id=request.documentId,
             query=request.query,
             limit=request.limit,
@@ -109,7 +109,8 @@ def process_base_retrieval(
         return {
             "documentId": request.documentId,
             "query": request.query,
-            "matches": matches
+            "matches": matches,
+            "confidenceScore": confidence_score
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

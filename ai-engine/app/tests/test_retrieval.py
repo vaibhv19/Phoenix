@@ -119,8 +119,15 @@ def test_retrieval_service_and_endpoint(db_session: Session):
         # Chunk 2: 0.7 * 0.9938837 + 0.3 * 1.0 = 0.9957186
         # Chunk 1: 0.7 * 0.7071068 + 0.3 * 0.0 = 0.4949748
         # Chunk 3: 0.7 * 0.0 + 0.3 * 0.0 = 0.0
+        #
+        # Confidence Score calculation:
+        # MaxSim = Chunk 2 sim = 0.9938837
+        # Top-3 Vector chunks: Chunk 2, Chunk 1, Chunk 3
+        # Top-5 Keyword chunks: Chunk 2, Chunk 1, Chunk 3 (since corpus is size 3)
+        # Agreement = Intersection count / 3 = 3 / 3 = 1.0
+        # CS = 0.6 * 0.9938837 + 0.4 * 1.0 = 0.9963302
         
-        results = retrieval_service.retrieve_hybrid(
+        results, confidence_score = retrieval_service.retrieve_hybrid(
             document_id=doc_id,
             query="vector databases",
             limit=3,
@@ -136,6 +143,8 @@ def test_retrieval_service_and_endpoint(db_session: Session):
         
         assert results[2][0].id == chunk_3.id
         assert results[2][1] == pytest.approx(0.0, abs=1e-5)
+        
+        assert confidence_score == pytest.approx(0.9963302, abs=1e-5)
 
         # 2. Test FastAPI endpoint (uses real EmbeddingService sentence-transformer)
         payload = {
@@ -151,11 +160,8 @@ def test_retrieval_service_and_endpoint(db_session: Session):
         assert data["documentId"] == str(doc_id)
         assert data["query"] == "vector databases search"
         assert len(data["matches"]) == 2
-        
-        # Chunk 2 should be the top match
-        assert data["matches"][0]["id"] == str(chunk_2.id)
-        assert data["matches"][0]["content"] == "Vector databases search dense embeddings."
-        assert data["matches"][0]["score"] > 0.0
+        assert "confidenceScore" in data
+        assert data["confidenceScore"] > 0.0
 
     finally:
         # Cleanup

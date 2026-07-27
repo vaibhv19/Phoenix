@@ -5,6 +5,7 @@ from app.services.vector_store import EmbeddingService
 from app.services.search_vector import VectorSearchService
 from app.services.search_keyword import KeywordSearchService
 from app.services.fusion import WLCFusion
+from app.services.confidence import ConfidenceService
 from app.models import DocumentChunk
 
 class RetrievalService:
@@ -18,14 +19,15 @@ class RetrievalService:
         query: str,
         limit: int = 5,
         alpha: float = 0.7
-    ) -> List[Tuple[DocumentChunk, float]]:
+    ) -> Tuple[List[Tuple[DocumentChunk, float]], float]:
         """
         Coordinated hybrid retrieval:
         1. Generates the embedding for the query.
         2. Retrieves top vector matches (fetches limit * 2 candidate chunks).
         3. Retrieves keyword matches for all chunks in the document.
         4. Fuses the results using MinMaxScaler normalization and WLC fusion.
-        5. Returns the top 'limit' fused matches.
+        5. Computes composite confidence score.
+        6. Returns the top 'limit' fused matches along with confidence score.
         """
         # 1. Generate query embedding
         query_embedding = self.embedding_service.embed_text(query)
@@ -54,5 +56,9 @@ class RetrievalService:
             alpha=alpha
         )
         
-        # 5. Return top 'limit' results
-        return fused_results[:limit]
+        # 5. Calculate composite confidence score
+        confidence_score = ConfidenceService.calculate_confidence(vector_results, keyword_results)
+        
+        # 6. Return top 'limit' results and confidence score
+        return fused_results[:limit], confidence_score
+
