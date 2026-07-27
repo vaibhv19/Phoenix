@@ -41,8 +41,8 @@ public class StorageService {
         }
 
         String originalFilename = file.getOriginalFilename();
-        if (originalFilename == null) {
-            throw new IllegalArgumentException("Original filename cannot be null.");
+        if (originalFilename == null || originalFilename.trim().isEmpty()) {
+            throw new IllegalArgumentException("Original filename cannot be null or empty.");
         }
 
         String cleanFileName = StringUtils.cleanPath(originalFilename);
@@ -55,6 +55,10 @@ public class StorageService {
         int dotIndex = cleanFileName.lastIndexOf('.');
         if (dotIndex > 0) {
             extension = cleanFileName.substring(dotIndex);
+        }
+
+        if (!extension.equalsIgnoreCase(".pdf")) {
+            throw new IllegalArgumentException("Only PDF files are allowed.");
         }
 
         // Target unique filename: documentId + extension
