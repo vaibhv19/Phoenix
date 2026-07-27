@@ -57,19 +57,19 @@ export default function ChatContainer() {
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden lg:grid lg:grid-cols-3">
       {/* Left Chat Column */}
-      <div className="lg:col-span-2 flex flex-col h-full overflow-hidden border-r border-gray-800">
+      <div className="lg:col-span-2 flex flex-col h-full overflow-hidden border-r border-zinc-800">
         {/* Header */}
-        <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-[#0F172A]/30">
+        <div className="p-3 border-b border-zinc-800 flex justify-between items-center bg-zinc-950/40">
           <div>
-            <h2 className="text-sm font-bold text-gray-250 truncate max-w-[200px] md:max-w-md">
+            <h2 className="text-xs font-semibold text-zinc-200 truncate max-w-[200px] md:max-w-md">
               {activeProject.name}
             </h2>
-            <p className="text-[10px] text-gray-500 font-medium">Hybrid Search Conversation Console</p>
+            <p className="text-[9px] text-zinc-500 font-medium">Retrieval Engine Workspace</p>
           </div>
           {messages.length > 0 && (
             <button 
               onClick={clearChat}
-              className="text-xs text-gray-400 hover:text-red-400 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-gray-800/60 transition flex items-center space-x-1"
+              className="text-xs text-zinc-400 hover:text-red-400 font-semibold px-2 py-1 rounded hover:bg-zinc-900 transition flex items-center space-x-1"
             >
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
