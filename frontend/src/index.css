@@ -31,3 +31,25 @@ h1, h2, h3, h4, h5, h6 {
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
+
+@keyframes pulse-highlight {
+  0% {
+    background-color: rgba(59, 130, 246, 0);
+    border-color: rgba(59, 130, 246, 0.2);
+  }
+  30% {
+    background-color: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.8);
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.25);
+  }
+  100% {
+    background-color: rgba(59, 130, 246, 0);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: none;
+  }
+}
+
+.animate-pulse-highlight {
+  animation: pulse-highlight 2s ease-out;
+}
+

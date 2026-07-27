@@ -293,7 +293,7 @@ export const useProjectStore = create((set, get) => ({
     
     if (qLower.includes('yaml') || qLower.includes('k8s') || qLower.includes('kubernetes')) {
       return {
-        answer: "To deploy the microservices on Kubernetes, use the specifications defined in `deployment.yaml` [p. 1 - YAML]. Ensure that container resources are allocated correctly, setting a memory limit of `512Mi` [p. 3 - YAML]. High availability is configured using 3 replicas [p. 12 - YAML].",
+        answer: "To deploy the microservices on Kubernetes, use the specifications defined in `deployment.yaml` [[p. 1 - YAML]](#match-1). Ensure that container resources are allocated correctly, setting a memory limit of `512Mi` [[p. 3 - YAML]](#match-2). High availability is configured using 3 replicas [[p. 12 - YAML]](#match-3).",
         confidenceScore: 0.88,
         reasoningTrace: [
           { state: "INITIAL_RETRIEVAL", confidenceScore: 0.88, description: "Initial retrieval found direct semantic matches in deployment.yaml." },
@@ -307,7 +307,7 @@ export const useProjectStore = create((set, get) => ({
       }
     } else if (qLower.includes('rewrite') || qLower.includes('optimize') || qLower.includes('yellow')) {
       return {
-        answer: "Based on the rewritten query 'gateway rate limit configuration', rate limits are set at 100 requests per minute per IP [p. 5 - Gateway]. Traffic throttling applies to both public and private APIs [p. 9 - Gateway].",
+        answer: "Based on the rewritten query 'gateway rate limit configuration', rate limits are set at 100 requests per minute per IP [[p. 5 - Gateway]](#match-4). Traffic throttling applies to both public and private APIs [[p. 9 - Gateway]](#match-5).",
         confidenceScore: 0.76,
         reasoningTrace: [
           { state: "INITIAL_RETRIEVAL", confidenceScore: 0.58, description: "Initial retrieval confidence is 0.58 (Yellow range [0.50, 0.75)). Triggering query rewrite fallback." },
@@ -321,7 +321,7 @@ export const useProjectStore = create((set, get) => ({
       }
     } else if (qLower.includes('rerank') || qLower.includes('orange') || qLower.includes('cross')) {
       return {
-        answer: "After Cross-Encoder reranking, the database indicates that CORS issues can be resolved by adjusting `allowedOrigins` in `WebConfig.java` [p. 15 - CORS]. Ensure headers include `Authorization` [p. 18 - CORS].",
+        answer: "After Cross-Encoder reranking, the database indicates that CORS issues can be resolved by adjusting `allowedOrigins` in `WebConfig.java` [[p. 15 - CORS]](#match-6). Ensure headers include `Authorization` [[p. 18 - CORS]](#match-7).",
         confidenceScore: 0.52,
         reasoningTrace: [
           { state: "INITIAL_RETRIEVAL", confidenceScore: 0.42, description: "Initial retrieval confidence is 0.42 (Orange range [0.35, 0.50)). Initiating FlashRank reranking." },
@@ -335,7 +335,7 @@ export const useProjectStore = create((set, get) => ({
       }
     } else if (qLower.includes('clarify') || qLower.includes('red') || qLower.includes('fail') || qLower.includes('what is the meaning of life')) {
       return {
-        answer: "Could you please clarify your request? I found matches relating to WebConfig.java [p. 15] or deployment.yaml [p. 1], but they do not contain details regarding your search query.",
+        answer: "Could you please clarify your request? I found matches relating to WebConfig.java [[p. 15]](#match-6) or deployment.yaml [[p. 1]](#match-1), but they do not contain details regarding your search query.",
         confidenceScore: 0.22,
         reasoningTrace: [
           { state: "INITIAL_RETRIEVAL", confidenceScore: 0.22, description: "Initial retrieval confidence is 0.22 (Red range < 0.35). Initiating clarification fallback." },
@@ -346,7 +346,7 @@ export const useProjectStore = create((set, get) => ({
       }
     } else {
       return {
-        answer: "The active system architecture incorporates a Spring Boot orchestrator [p. 2 - Design] and a pgvector database [p. 4 - Design] to coordinate ingestion. Chunks are generated dynamically from PDFs and scored via WLC fusion.",
+        answer: "The active system architecture incorporates a Spring Boot orchestrator [[p. 2 - Design]](#match-8) and a pgvector database [[p. 4 - Design]](#match-9) to coordinate ingestion. Chunks are generated dynamically from PDFs and scored via WLC fusion.",
         confidenceScore: 0.81,
         reasoningTrace: [
           { state: "INITIAL_RETRIEVAL", confidenceScore: 0.81, description: "Initial retrieval completed. Confidence score: 0.81 (Green)." },
