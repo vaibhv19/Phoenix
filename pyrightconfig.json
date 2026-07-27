@@ -1,7 +1,7 @@
 {
-  "venvPath": "ai-engine",
+  "venvPath": "d:\\Coding\\Projects----For Resume\\Phoenix\\ai-engine",
   "venv": ".venv",
-  "pythonPath": "ai-engine/.venv/Scripts/python.exe",
+  "pythonPath": "d:\\Coding\\Projects----For Resume\\Phoenix\\ai-engine\\.venv\\Scripts\\python.exe",
   "extraPaths": [
     "ai-engine"
   ],

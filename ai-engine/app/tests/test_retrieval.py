@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models import User, Project, Document, DocumentChunk
 from app.services.retrieval import RetrievalService
+from app.services.vector_store import EmbeddingService
 from app.main import app
 
 client = TestClient(app)
@@ -94,7 +95,9 @@ def test_retrieval_service_and_endpoint(db_session: Session):
 
     try:
         # 1. Test RetrievalService directly with a mocked EmbeddingService
-        class MockEmbeddingService:
+        class MockEmbeddingService(EmbeddingService):
+            def __init__(self):
+                pass
             def embed_text(self, text: str):
                 emb = [0.0] * 384
                 emb[0] = 1.0

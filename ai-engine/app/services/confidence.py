@@ -13,7 +13,7 @@ class MaxSimExtractor:
         if not vector_results:
             return 0.0
         score = vector_results[0][1]
-        return max(0.0, min(1.0, float(score)))
+        return max(0.0, min(1.0, score))
 
 class AgreementCalculator:
     @staticmethod
