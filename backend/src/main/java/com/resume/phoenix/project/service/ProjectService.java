@@ -1,5 +1,6 @@
 package com.resume.phoenix.project.service;
 
+import com.resume.phoenix.exception.ResourceNotFoundException;
 import com.resume.phoenix.project.dto.ProjectRequest;
 import com.resume.phoenix.project.dto.ProjectResponse;
 import com.resume.phoenix.project.entity.Project;
@@ -39,7 +40,7 @@ public class ProjectService {
     @Transactional(readOnly = true)
     public ProjectResponse getProject(UUID id, UUID userId) {
         Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Project not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
         if (!project.getUserId().equals(userId)) {
             throw new AccessDeniedException("Access denied to project with id: " + id);
         }
@@ -49,7 +50,7 @@ public class ProjectService {
     @Transactional
     public void deleteProject(UUID id, UUID userId) {
         Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Project not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
         if (!project.getUserId().equals(userId)) {
             throw new AccessDeniedException("Access denied to project with id: " + id);
         }
