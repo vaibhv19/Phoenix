@@ -77,6 +77,75 @@ export const useProjectStore = create((set, get) => ({
     }
   },
 
+  deleteProject: async (projectId) => {
+    const token = localStorage.getItem('token')
+    try {
+      const response = await fetch(`${BACKEND_URL}/projects/${projectId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      if (!response.ok) {
+        let errorMsg = 'Failed to delete project'
+        try {
+          const errData = await response.json()
+          if (errData && errData.message) errorMsg = errData.message
+        } catch (_) {}
+        throw new Error(errorMsg)
+      }
+      
+      set(state => {
+        const remainingProjects = state.projects.filter(p => p.id !== projectId)
+        let newActiveProject = state.activeProject
+        if (state.activeProject?.id === projectId) {
+          newActiveProject = remainingProjects.length > 0 ? remainingProjects[0] : null
+        }
+        localStorage.removeItem(`docs_${projectId}`)
+        localStorage.removeItem(`msgs_${projectId}`)
+        return { 
+          projects: remainingProjects,
+          activeProject: newActiveProject
+        }
+      })
+      
+      const nextActive = get().activeProject
+      if (nextActive) {
+        get().setActiveProject(nextActive)
+      } else {
+        set({ documents: [], messages: [] })
+      }
+    } catch (err) {
+      console.error("Project deletion error:", err)
+      const storedMock = localStorage.getItem('mock_projects')
+      if (storedMock) {
+        set(state => {
+          const remainingProjects = state.projects.filter(p => p.id !== projectId)
+          let newActiveProject = state.activeProject
+          if (state.activeProject?.id === projectId) {
+            newActiveProject = remainingProjects.length > 0 ? remainingProjects[0] : null
+          }
+          const projects = JSON.parse(storedMock).filter(p => p.id !== projectId)
+          localStorage.setItem('mock_projects', JSON.stringify(projects))
+          localStorage.removeItem(`docs_${projectId}`)
+          localStorage.removeItem(`msgs_${projectId}`)
+          return {
+            projects: remainingProjects,
+            activeProject: newActiveProject
+          }
+        })
+        const nextActive = get().activeProject
+        if (nextActive) {
+          get().setActiveProject(nextActive)
+        } else {
+          set({ documents: [], messages: [] })
+        }
+        return
+      }
+      throw err;
+    }
+  },
+
   setActiveProject: (project) => {
     set({ activeProject: project })
     if (project) {

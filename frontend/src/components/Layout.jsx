@@ -9,6 +9,7 @@ export default function Layout({ children }) {
     activeProject, 
     fetchProjects, 
     createProject, 
+    deleteProject,
     setActiveProject, 
     activeView, 
     setView 
@@ -28,6 +29,15 @@ export default function Layout({ children }) {
     await createProject(newProjName.trim())
     setNewProjName('')
     setShowNewProjModal(false)
+  }
+
+  const handleDeleteProject = async (projectId) => {
+    if (!projectId) return
+    try {
+      await deleteProject(projectId)
+    } catch (err) {
+      alert("Error: " + err.message)
+    }
   }
 
   return (
@@ -86,18 +96,29 @@ export default function Layout({ children }) {
                     + Create a Project
                   </button>
                 ) : (
-                  <select 
-                    value={activeProject?.id || ''} 
-                    onChange={(e) => {
-                      const proj = projects.find(p => p.id === e.target.value)
-                      if (proj) setActiveProject(proj)
-                    }}
-                    className="w-full bg-[#161618] border border-zinc-800 text-zinc-300 text-xs rounded px-2.5 py-2 outline-none focus:border-zinc-700 transition cursor-pointer"
-                  >
-                    {projects.map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
+                  <div className="flex items-center space-x-2">
+                    <select 
+                      value={activeProject?.id || ''} 
+                      onChange={(e) => {
+                        const proj = projects.find(p => p.id === e.target.value)
+                        if (proj) setActiveProject(proj)
+                      }}
+                      className="flex-1 bg-[#161618] border border-zinc-800 text-zinc-300 text-xs rounded px-2.5 py-2 outline-none focus:border-zinc-700 transition cursor-pointer"
+                    >
+                      {projects.map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                    <button 
+                      onClick={() => handleDeleteProject(activeProject?.id)}
+                      className="p-2 bg-[#161618] border border-zinc-800 hover:bg-red-950/20 hover:border-red-900/40 rounded text-zinc-400 hover:text-red-400 transition shrink-0"
+                      title="Delete active project"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
                 )}
               </div>
             ) : (
