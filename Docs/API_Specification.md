@@ -40,6 +40,13 @@ This document defines the two distinct API contracts for the **Phoenix** system:
 | `/query` | `POST` | Main RAG interface | `ChatRequest` | `ChatResponse` |
 | `/history` | `GET` | Fetches previous interactions | Query: `limit`, `offset` | `List<ChatResponse>` |
 
+### 5. Project Management (`/projects`)
+| Path | Method | Description | Request | Response |
+| :--- | :--- | :--- | :--- | :--- |
+| `/` | `GET` | Lists all projects for the tenant | None | `List<ProjectResponse>` |
+| `/` | `POST` | Creates a new project workspace | `{ "name" }` | `ProjectResponse` |
+| `/{id}` | `DELETE` | Deletes project and cascades disk/DB cleanup | Path Variable `id` | None (204 No Content) |
+
 #### Key DTO Shapes (Part A):
 **`ChatRequest`**:
 ```json

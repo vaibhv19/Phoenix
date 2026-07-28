@@ -3,7 +3,7 @@
 ## Spring Boot API Layer (Java Backend / Full Stack)
 
 - Auth (JWT)
-- User & project management
+- User & project management (including Project Deletion with cascading physical file and database chunk/embedding cleanups)
 - Document upload handling (PDFs → passed to AI engine for processing)
 - Internal API contract to Python AI Engine (REST)
 - Stores metadata: documents, chunks reference, query history
