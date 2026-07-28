@@ -25,6 +25,20 @@ export default function Layout({ children }) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [toast, setToast] = useState(null)
 
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
+
+  const handleLogout = () => {
+    logout()
+    useProjectStore.setState({
+      projects: [],
+      activeProject: null,
+      documents: [],
+      messages: [],
+      activeView: 'chat',
+      error: null
+    })
+  }
+
   useEffect(() => {
     if (toast) {
       const timer = setTimeout(() => setToast(null), 4000)
@@ -47,11 +61,14 @@ export default function Layout({ children }) {
           setShowDeleteConfirm(false)
           setProjectToDelete(null)
         }
+        if (isProfileMenuOpen) {
+          setIsProfileMenuOpen(false)
+        }
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [showNewProjModal, showDeleteConfirm])
+  }, [showNewProjModal, showDeleteConfirm, isProfileMenuOpen])
 
 
   const handleCreateProject = async (e) => {
@@ -202,38 +219,61 @@ export default function Layout({ children }) {
         </div>
 
         {/* Footer / User Profile & Logout */}
-        <div className="p-3 border-t border-zinc-800 bg-zinc-950/40 flex flex-col items-center">
+        <div className="relative p-3 border-t border-zinc-800 bg-zinc-950/40 w-full flex items-center justify-between">
+          {/* Profile Menu Dropdown */}
+          {isProfileMenuOpen && (
+            <div className={`absolute bottom-16 left-3 bg-[#161618] border border-zinc-800 rounded-lg p-2 shadow-2xl z-50 animate-slide-in ${isSidebarOpen ? 'right-3' : 'w-48'}`}>
+              <div className="p-2 text-xs border-b border-zinc-800">
+                <p className="font-semibold text-zinc-300 truncate">{user?.username || 'User'}</p>
+                <p className="text-[10px] text-zinc-500 truncate mt-0.5">{user?.email || 'authenticated'}</p>
+              </div>
+              <button 
+                onClick={handleLogout}
+                className="w-full flex items-center space-x-2.5 p-2 mt-1 rounded text-left text-xs font-semibold text-zinc-400 hover:text-red-400 hover:bg-red-950/20 transition duration-150"
+              >
+                <svg className="h-4 w-4" style={{ width: '16px', height: '16px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span>Sign Out</span>
+              </button>
+            </div>
+          )}
+
           {isSidebarOpen ? (
-            <div className="w-full flex items-center justify-between">
+            <div 
+              onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+              className="w-full flex items-center justify-between cursor-pointer group"
+            >
               <div className="flex items-center space-x-2 truncate">
-                <div className="h-7 w-7 rounded border border-zinc-700 bg-zinc-800 flex items-center justify-center font-semibold text-[10px] text-zinc-300 shrink-0">
+                <div className="h-7 w-7 rounded border border-zinc-700 bg-zinc-800 flex items-center justify-center font-semibold text-[10px] text-zinc-300 shrink-0 group-hover:border-zinc-500 transition">
                   {user?.username?.substring(0, 2).toUpperCase() || 'US'}
                 </div>
-                <div className="truncate max-w-[100px]">
-                  <p className="text-xs font-medium text-zinc-250 truncate">{user?.username || 'User'}</p>
+                <div className="truncate max-w-[110px]">
+                  <p className="text-xs font-medium text-zinc-250 truncate group-hover:text-zinc-150 transition">{user?.username || 'User'}</p>
                   <p className="text-[9px] text-zinc-500 truncate">{user?.email || 'authenticated'}</p>
                 </div>
               </div>
               <button 
-                onClick={logout}
-                className="text-zinc-500 hover:text-red-400 p-1.5 rounded hover:bg-zinc-900 transition"
-                title="Logout"
+                type="button"
+                className="text-zinc-500 hover:text-zinc-350 p-1.5 rounded transition"
+                title="Profile options"
+                aria-label="Profile options"
               >
-                <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
                 </svg>
               </button>
             </div>
           ) : (
-            <button 
-              onClick={logout}
-              className="h-8 w-8 bg-zinc-900 border border-zinc-800 hover:bg-red-950/20 rounded flex items-center justify-center text-zinc-500 hover:text-red-400 mx-auto transition"
-              title="Logout"
+            <div 
+              onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+              className="h-8 w-8 rounded border border-zinc-800 bg-[#161618] hover:border-zinc-700 flex items-center justify-center text-zinc-350 cursor-pointer mx-auto transition group"
+              title="Profile options"
             >
-              <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-            </button>
+              <span className="font-semibold text-[10px] text-zinc-400 group-hover:text-zinc-200">
+                {user?.username?.substring(0, 2).toUpperCase() || 'US'}
+              </span>
+            </div>
           )}
         </div>
       </aside>
