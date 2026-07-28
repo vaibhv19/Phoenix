@@ -2,6 +2,10 @@ package com.resume.phoenix.project.service;
 
 import com.resume.phoenix.auth.entity.User;
 import com.resume.phoenix.auth.repository.UserRepository;
+import com.resume.phoenix.document.entity.Document;
+import com.resume.phoenix.document.entity.DocumentStatus;
+import com.resume.phoenix.document.repository.DocumentRepository;
+import com.resume.phoenix.document.service.StorageService;
 import com.resume.phoenix.project.dto.ProjectRequest;
 import com.resume.phoenix.project.dto.ProjectResponse;
 import com.resume.phoenix.project.repository.ProjectRepository;
@@ -9,14 +13,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 
 @SpringBootTest
 @Transactional
@@ -31,11 +37,18 @@ class ProjectServiceTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private DocumentRepository documentRepository;
+
+    @MockBean
+    private StorageService storageService;
+
     private User user1;
     private User user2;
 
     @BeforeEach
     void setUp() {
+        documentRepository.deleteAll();
         projectRepository.deleteAll();
         userRepository.deleteAll();
 
@@ -126,5 +139,29 @@ class ProjectServiceTest {
         assertThatThrownBy(() -> projectService.deleteProject(created.getId(), user2.getId()))
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessageContaining("Access denied");
+    }
+
+    @Test
+    void testDeleteProjectCascadesToPhysicalFiles() {
+        ProjectRequest r = ProjectRequest.builder().name("Project with files").build();
+        ProjectResponse created = projectService.createProject(r, user1.getId());
+
+        // Create a document for this project
+        Document doc = Document.builder()
+                .projectId(created.getId())
+                .fileName("test.pdf")
+                .status(DocumentStatus.READY)
+                .storagePath("/path/to/test.pdf")
+                .build();
+        documentRepository.save(doc);
+
+        // Delete project
+        projectService.deleteProject(created.getId(), user1.getId());
+
+        // Verify storageService.delete was called for the document path
+        verify(storageService, times(1)).delete("/path/to/test.pdf");
+
+        // Verify database records are removed
+        assertThat(projectRepository.findById(created.getId())).isEmpty();
     }
 }
