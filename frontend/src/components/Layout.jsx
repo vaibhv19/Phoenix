@@ -36,6 +36,24 @@ export default function Layout({ children }) {
     fetchProjects()
   }, [])
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (showNewProjModal) {
+          setShowNewProjModal(false)
+          setNewProjName('')
+        }
+        if (showDeleteConfirm) {
+          setShowDeleteConfirm(false)
+          setProjectToDelete(null)
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [showNewProjModal, showDeleteConfirm])
+
+
   const handleCreateProject = async (e) => {
     e.preventDefault()
     if (!newProjName.trim()) return

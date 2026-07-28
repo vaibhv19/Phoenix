@@ -93,3 +93,58 @@ describe('useProjectStore - deleteProject', () => {
     expect(localStorage.getItem('docs_proj-1')).toBeNull()
   })
 })
+
+describe('useProjectStore - fetchDocuments & deleteDocument', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    localStorage.clear()
+    
+    useProjectStore.setState({
+      projects: [],
+      activeProject: null,
+      documents: [],
+      messages: [],
+    })
+  })
+
+  it('successfully fetches documents via API', async () => {
+    const mockDocs = [{ id: 'doc-1', fileName: 'test.pdf', status: 'READY' }]
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockDocs),
+    })
+    global.fetch = fetchMock
+
+    await getStore().fetchDocuments('proj-1')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/documents?projectId=proj-1'),
+      expect.anything()
+    )
+    expect(getStore().documents).toHaveLength(1)
+    expect(getStore().documents[0].filename).toBe('test.pdf')
+    expect(localStorage.getItem('docs_proj-1')).toContain('test.pdf')
+  })
+
+  it('successfully deletes a document via API', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+    })
+    global.fetch = fetchMock
+
+    useProjectStore.setState({
+      activeProject: { id: 'proj-1' },
+      documents: [{ id: 'doc-1', filename: 'test.pdf', status: 'READY' }]
+    })
+    localStorage.setItem('docs_proj-1', JSON.stringify([{ id: 'doc-1' }]))
+
+    await getStore().deleteDocument('doc-1')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/documents/doc-1'),
+      expect.objectContaining({ method: 'DELETE' })
+    )
+    expect(getStore().documents).toHaveLength(0)
+    expect(JSON.parse(localStorage.getItem('docs_proj-1'))).toHaveLength(0)
+  })
+})

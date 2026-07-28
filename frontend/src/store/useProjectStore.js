@@ -11,6 +11,7 @@ export const useProjectStore = create((set, get) => ({
   activeView: 'chat', // 'chat' | 'vault'
   isQuerying: false,
   isUploading: false,
+  isDeletingDoc: false,
   error: null,
 
   fetchProjects: async () => {
@@ -149,17 +150,82 @@ export const useProjectStore = create((set, get) => ({
   setActiveProject: (project) => {
     set({ activeProject: project })
     if (project) {
-      // Load documents from localStorage for this project
-      const storedDocs = localStorage.getItem(`docs_${project.id}`)
-      const documents = storedDocs ? JSON.parse(storedDocs) : []
+      // Fetch documents from backend
+      get().fetchDocuments(project.id)
       
       // Load messages from localStorage for this project
       const storedMsgs = localStorage.getItem(`msgs_${project.id}`)
       const messages = storedMsgs ? JSON.parse(storedMsgs) : []
 
-      set({ documents, messages })
+      set({ messages })
     } else {
       set({ documents: [], messages: [] })
+    }
+  },
+
+  fetchDocuments: async (projectId) => {
+    const token = localStorage.getItem('token')
+    try {
+      const response = await fetch(`${BACKEND_URL}/documents?projectId=${projectId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      if (!response.ok) throw new Error('Failed to fetch documents')
+      const data = await response.json()
+      const documents = data.map(d => ({
+        id: d.id,
+        filename: d.fileName || d.filename,
+        status: d.status,
+        createdAt: d.createdAt || new Date().toISOString()
+      }))
+      set({ documents })
+      localStorage.setItem(`docs_${projectId}`, JSON.stringify(documents))
+    } catch (err) {
+      console.warn("Failed to fetch documents from API, using cached data:", err.message)
+      const storedDocs = localStorage.getItem(`docs_${projectId}`)
+      const documents = storedDocs ? JSON.parse(storedDocs) : []
+      set({ documents })
+    }
+  },
+
+  deleteDocument: async (docId) => {
+    const activeProject = get().activeProject
+    if (!activeProject) return
+    
+    set({ isDeletingDoc: true })
+    const token = localStorage.getItem('token')
+    try {
+      const response = await fetch(`${BACKEND_URL}/documents/${docId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      if (!response.ok) {
+        let errorMsg = 'Failed to delete document'
+        try {
+          const errData = await response.json()
+          if (errData && errData.message) errorMsg = errData.message
+        } catch (_) {}
+        throw new Error(errorMsg)
+      }
+      
+      set(state => {
+        const remainingDocs = state.documents.filter(d => d.id !== docId)
+        localStorage.setItem(`docs_${activeProject.id}`, JSON.stringify(remainingDocs))
+        return { documents: remainingDocs }
+      })
+    } catch (err) {
+      console.error("Failed to delete document via API:", err.message)
+      set(state => {
+        const remainingDocs = state.documents.filter(d => d.id !== docId)
+        localStorage.setItem(`docs_${activeProject.id}`, JSON.stringify(remainingDocs))
+        return { documents: remainingDocs }
+      })
+      throw err
+    } finally {
+      set({ isDeletingDoc: false })
     }
   },
 

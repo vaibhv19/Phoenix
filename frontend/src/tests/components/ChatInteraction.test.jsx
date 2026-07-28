@@ -29,7 +29,7 @@ describe('ChatContainer Component tests', () => {
   const defaultStoreState = {
     activeProject: { id: 'proj-123', name: 'Phoenix Test App' },
     messages: [],
-    documents: [],
+    documents: [{ id: 'doc-1', filename: 'doc.pdf', status: 'READY', chunkCount: 10 }],
     queryRAG: mockQueryRAG,
     isQuerying: false,
     clearChat: mockClearChat,
@@ -78,7 +78,7 @@ describe('ChatContainer Component tests', () => {
     render(<ChatContainer />)
 
     const input = screen.getByPlaceholderText('Ask a technical question...')
-    const submitBtn = screen.getByRole('button', { name: '' }) // Right side SVG button
+    const submitBtn = screen.getByRole('button', { name: 'Submit query' })
 
     fireEvent.change(input, { target: { value: 'How to configure postgres?' } })
     fireEvent.click(submitBtn)

@@ -9,6 +9,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -28,6 +29,15 @@ public class DocumentController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping
+    public ResponseEntity<List<DocumentResponse>> listDocuments(
+            @RequestParam("projectId") UUID projectId,
+            @AuthenticationPrincipal User user
+    ) {
+        List<DocumentResponse> response = documentService.listDocuments(projectId, user.getId());
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/{id}/status")
     public ResponseEntity<DocumentResponse> getDocumentStatus(
             @PathVariable UUID id,
@@ -35,5 +45,14 @@ public class DocumentController {
     ) {
         DocumentResponse response = documentService.getDocumentStatus(id, user.getId());
         return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteDocument(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal User user
+    ) {
+        documentService.deleteDocument(id, user.getId());
+        return ResponseEntity.noContent().build();
     }
 }

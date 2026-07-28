@@ -32,10 +32,12 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.boot.test.mock.mockito.MockBean;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -249,5 +251,68 @@ class DocumentControllerIntegrationTest {
         mockMvc.perform(get("/api/documents/" + document.getId() + "/status")
                         .with(user(user1)))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testListDocumentsSuccess() throws Exception {
+        Document document = Document.builder()
+                .projectId(project1.getId())
+                .fileName("test-list.pdf")
+                .status(DocumentStatus.READY)
+                .storagePath("/some/path")
+                .chunkCount(5)
+                .build();
+        documentRepository.save(document);
+
+        mockMvc.perform(get("/api/documents")
+                        .param("projectId", project1.getId().toString())
+                        .with(user(user1)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].fileName").value("test-list.pdf"))
+                .andExpect(jsonPath("$[0].status").value("READY"));
+    }
+
+    @Test
+    void testListDocumentsAccessDenied() throws Exception {
+        mockMvc.perform(get("/api/documents")
+                        .param("projectId", project2.getId().toString())
+                        .with(user(user1)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testDeleteDocumentSuccess() throws Exception {
+        Document document = Document.builder()
+                .projectId(project1.getId())
+                .fileName("to-delete.pdf")
+                .status(DocumentStatus.READY)
+                .storagePath("/delete/path")
+                .chunkCount(1)
+                .build();
+        document = documentRepository.save(document);
+
+        mockMvc.perform(delete("/api/documents/" + document.getId())
+                        .with(user(user1)))
+                .andExpect(status().isNoContent());
+
+        assertThat(documentRepository.findById(document.getId())).isEmpty();
+    }
+
+    @Test
+    void testDeleteDocumentAccessDenied() throws Exception {
+        Document document = Document.builder()
+                .projectId(project2.getId())
+                .fileName("other-user-doc.pdf")
+                .status(DocumentStatus.READY)
+                .storagePath("/other/path")
+                .chunkCount(1)
+                .build();
+        document = documentRepository.save(document);
+
+        mockMvc.perform(delete("/api/documents/" + document.getId())
+                        .with(user(user1)))
+                .andExpect(status().isForbidden());
+
+        assertThat(documentRepository.findById(document.getId())).isPresent();
     }
 }

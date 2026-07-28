@@ -197,14 +197,16 @@ export default function ChatContainer() {
               type="text" 
               value={inputVal}
               onChange={(e) => setInputVal(e.target.value)}
-              placeholder="Ask a technical question..."
-              className="w-full bg-[#161618] border border-zinc-800 rounded pl-3 pr-10 py-2.5 text-xs text-zinc-200 placeholder-zinc-600 outline-none focus:border-zinc-700 transition"
-              disabled={isQuerying}
+              placeholder={documents.length === 0 ? "Please upload manuals in the Document Vault to start querying..." : "Ask a technical question..."}
+              className="w-full bg-[#161618] border border-zinc-800 rounded pl-3 pr-10 py-2.5 text-xs text-zinc-200 placeholder-zinc-600 outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isQuerying || documents.length === 0}
+              aria-label="RAG query input field"
             />
             <button 
               type="submit"
-              disabled={!inputVal.trim() || isQuerying}
-              className={`absolute right-2 p-1.5 rounded transition ${inputVal.trim() && !isQuerying ? 'text-blue-500 hover:text-blue-400' : 'text-zinc-650 bg-transparent'}`}
+              disabled={!inputVal.trim() || isQuerying || documents.length === 0}
+              className={`absolute right-2 p-1.5 rounded transition ${inputVal.trim() && !isQuerying && documents.length > 0 ? 'text-blue-500 hover:text-blue-400' : 'text-zinc-600 bg-transparent cursor-not-allowed'}`}
+              aria-label="Submit query"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9-2-9-18-9 18 9-2zm0 0v-8" />
