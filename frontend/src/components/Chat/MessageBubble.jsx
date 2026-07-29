@@ -1,12 +1,8 @@
-import React, { useState } from 'react'
-import { motion } from 'framer-motion'
+import React from 'react'
 import ReactMarkdown from 'react-markdown'
-import ConfidenceBadge from '../Shared/ConfidenceBadge'
-import ReasoningTimeline from './ReasoningTimeline'
 
-export default function MessageBubble({ message, onSelect }) {
+export default function MessageBubble({ message, onSelect, isActive }) {
   const isUser = message.sender === 'user'
-  const [isTimelineOpen, setIsTimelineOpen] = useState(false)
 
   const markdownComponents = {
     a: ({ href, children }) => {
@@ -17,7 +13,7 @@ export default function MessageBubble({ message, onSelect }) {
             href={href}
             onClick={(e) => {
               e.preventDefault()
-              onSelect() // Select the message to load its citations in the sidebar
+              onSelect() // Select the message to load its citations/trace in the sidebar
               setTimeout(() => {
                 const element = document.getElementById(`citation-card-${matchId}`)
                 if (element) {
@@ -42,20 +38,23 @@ export default function MessageBubble({ message, onSelect }) {
   return (
     <div 
       onClick={onSelect}
-      className={`flex flex-col space-y-2 cursor-pointer max-w-2xl p-3.5 rounded border transition duration-150 ${isUser ? 'align-self-end bg-[#161618] ml-auto border-zinc-800' : 'bg-transparent mr-auto border-transparent hover:bg-zinc-900/20'}`}
+      className={`flex flex-col space-y-2 cursor-pointer max-w-2xl p-3.5 rounded border transition duration-150 ${
+        isUser 
+          ? 'align-self-end bg-[#161618] ml-auto border-zinc-800' 
+          : isActive 
+            ? 'bg-zinc-900/15 border-zinc-850 mr-auto'
+            : 'bg-transparent mr-auto border-transparent hover:bg-zinc-900/10'
+      }`}
     >
       <div className="flex items-center space-x-2">
         {!isUser && (
-          <div className="h-5 w-5 rounded border border-zinc-700 bg-zinc-800 flex items-center justify-center font-bold text-[9px] text-zinc-350">
+          <div className="h-5 w-5 rounded border border-zinc-700 bg-zinc-800 flex items-center justify-center font-bold text-[9px] text-zinc-350 select-none">
             AI
           </div>
         )}
-        <span className="text-[11px] font-semibold text-zinc-400">
+        <span className="text-[11px] font-semibold text-zinc-400 select-none">
           {isUser ? 'You' : 'Phoenix Retrieval Assistant'}
         </span>
-        {!isUser && message.confidenceScore !== undefined && (
-          <ConfidenceBadge score={message.confidenceScore} />
-        )}
       </div>
 
       <div className="text-[13px] text-zinc-200 leading-relaxed break-words markdown-container">
@@ -67,34 +66,6 @@ export default function MessageBubble({ message, onSelect }) {
           </ReactMarkdown>
         )}
       </div>
-
-      {!isUser && message.reasoningTrace && message.reasoningTrace.length > 0 && (
-        <div className="pt-1.5">
-          <button 
-            onClick={(e) => {
-              e.stopPropagation()
-              setIsTimelineOpen(!isTimelineOpen)
-            }}
-            className="flex items-center space-x-1.5 text-xs text-blue-500 hover:text-blue-400 font-medium transition"
-          >
-            <svg className={`h-3 w-3 transition-transform duration-150 ${isTimelineOpen ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-            </svg>
-            <span>{isTimelineOpen ? 'Hide Retrieval Trace' : 'View Retrieval Trace'}</span>
-          </button>
-
-          <motion.div
-            initial={false}
-            animate={{ height: isTimelineOpen ? 'auto' : 0, opacity: isTimelineOpen ? 1 : 0 }}
-            className="overflow-hidden"
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
-          >
-            <div className="pt-2">
-              <ReasoningTimeline steps={message.reasoningTrace} />
-            </div>
-          </motion.div>
-        </div>
-      )}
     </div>
   )
 }
