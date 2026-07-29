@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useAuthStore } from '../store/useAuthStore'
 import { useProjectStore } from '../store/useProjectStore'
 
@@ -12,11 +12,14 @@ export default function Layout({ children }) {
     deleteProject,
     setActiveProject, 
     activeView, 
-    setView 
+    setView,
+    isCreateModalOpen,
+    setCreateModalOpen
   } = useProjectStore()
 
-  const [showNewProjModal, setShowNewProjModal] = useState(false)
   const [newProjName, setNewProjName] = useState('')
+  const [isCreatingProject, setIsCreatingProject] = useState(false)
+  const [createProjectError, setCreateProjectError] = useState(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
 
   // Deletion and Feedback States
@@ -26,6 +29,65 @@ export default function Layout({ children }) {
   const [toast, setToast] = useState(null)
 
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
+
+  const getUserDisplayName = () => {
+    if (!user) return 'User'
+    
+    // 1. displayName
+    if (user.displayName && typeof user.displayName === 'string' && user.displayName.trim()) {
+      return user.displayName.trim()
+    }
+    
+    // 2. full_name
+    if (user.full_name && typeof user.full_name === 'string' && user.full_name.trim()) {
+      return user.full_name.trim()
+    }
+    
+    // 3. name
+    if (user.name && typeof user.name === 'string' && user.name.trim()) {
+      return user.name.trim()
+    }
+    
+    // 4. first_name + last_name
+    const hasFirstName = user.first_name && typeof user.first_name === 'string' && user.first_name.trim()
+    const hasLastName = user.last_name && typeof user.last_name === 'string' && user.last_name.trim()
+    if (hasFirstName || hasLastName) {
+      return `${user.first_name || ''} ${user.last_name || ''}`.trim()
+    }
+    
+    // Check if user.username is not an email
+    const isEmail = (str) => typeof str === 'string' && str.includes('@')
+    if (user.username && !isEmail(user.username)) {
+      return user.username.trim()
+    }
+    
+    // Fallback: derive name from email username (email left side)
+    const emailToParse = user.email || (isEmail(user.username) ? user.username : '')
+    if (emailToParse) {
+      const leftSide = emailToParse.split('@')[0]
+      const parts = leftSide.split(/[._\-+]/)
+      const capitalized = parts
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .filter(Boolean)
+        .join(' ')
+      if (capitalized) return capitalized
+    }
+    
+    return user.username || 'User'
+  }
+
+  const userDisplayName = getUserDisplayName()
+
+  const getUserInitials = (name) => {
+    if (!name) return 'US'
+    const parts = name.split(/\s+/)
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase()
+    }
+    return name.substring(0, 2).toUpperCase()
+  }
+
+  const userInitials = getUserInitials(userDisplayName)
 
   const handleLogout = () => {
     logout()
@@ -37,6 +99,68 @@ export default function Layout({ children }) {
       activeView: 'chat',
       error: null
     })
+  }
+
+  // Custom Workspace Dropdown Selector States & Handlers
+  const [isWorkspaceDropdownOpen, setIsWorkspaceDropdownOpen] = useState(false)
+  const [focusedWorkspaceIndex, setFocusedWorkspaceIndex] = useState(-1)
+  const workspaceDropdownRef = useRef(null)
+  const workspaceTriggerRef = useRef(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        workspaceDropdownRef.current && 
+        !workspaceDropdownRef.current.contains(e.target) && 
+        workspaceTriggerRef.current && 
+        !workspaceTriggerRef.current.contains(e.target)
+      ) {
+        setIsWorkspaceDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleWorkspaceKeyDown = (e) => {
+    if (!isWorkspaceDropdownOpen) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault()
+        setIsWorkspaceDropdownOpen(true)
+        const idx = projects.findIndex(p => p.id === activeProject?.id)
+        setFocusedWorkspaceIndex(idx >= 0 ? idx : 0)
+      }
+      return
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault()
+        setFocusedWorkspaceIndex(prev => (prev + 1) % projects.length)
+        break;
+      case 'ArrowUp':
+        e.preventDefault()
+        setFocusedWorkspaceIndex(prev => (prev - 1 + projects.length) % projects.length)
+        break;
+      case 'Enter':
+        e.preventDefault()
+        if (focusedWorkspaceIndex >= 0 && focusedWorkspaceIndex < projects.length) {
+          setActiveProject(projects[focusedWorkspaceIndex])
+        }
+        setIsWorkspaceDropdownOpen(false)
+        workspaceTriggerRef.current?.focus()
+        break;
+      case 'Escape':
+        e.preventDefault()
+        setIsWorkspaceDropdownOpen(false)
+        workspaceTriggerRef.current?.focus()
+        break;
+      case 'Tab':
+        setIsWorkspaceDropdownOpen(false)
+        break;
+      default:
+        break;
+    }
   }
 
   useEffect(() => {
@@ -53,11 +177,12 @@ export default function Layout({ children }) {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        if (showNewProjModal) {
-          setShowNewProjModal(false)
+        if (isCreateModalOpen && !isCreatingProject) {
+          setCreateModalOpen(false)
           setNewProjName('')
+          setCreateProjectError(null)
         }
-        if (showDeleteConfirm) {
+        if (showDeleteConfirm && !isDeleting) {
           setShowDeleteConfirm(false)
           setProjectToDelete(null)
         }
@@ -68,15 +193,28 @@ export default function Layout({ children }) {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [showNewProjModal, showDeleteConfirm, isProfileMenuOpen])
+  }, [isCreateModalOpen, isCreatingProject, showDeleteConfirm, isDeleting, isProfileMenuOpen])
 
 
   const handleCreateProject = async (e) => {
     e.preventDefault()
-    if (!newProjName.trim()) return
-    await createProject(newProjName.trim())
-    setNewProjName('')
-    setShowNewProjModal(false)
+    const trimmedName = newProjName.trim()
+    if (!trimmedName || isCreatingProject) return
+    
+    setIsCreatingProject(true)
+    setCreateProjectError(null)
+    
+    try {
+      await createProject(trimmedName)
+      setToast({ message: 'Workspace created', type: 'success' })
+      setNewProjName('')
+      setCreateModalOpen(false)
+    } catch (err) {
+      console.error("Workspace creation failed:", err)
+      setCreateProjectError(err.message || 'Unable to create workspace. Please try again.')
+    } finally {
+      setIsCreatingProject(false)
+    }
   }
 
   const handleDeleteProject = (projectId) => {
@@ -104,197 +242,254 @@ export default function Layout({ children }) {
   }
 
   return (
-    <div className="flex h-screen bg-[#09090b] text-[#f4f4f5] overflow-hidden font-sans">
-      {/* Sidebar */}
-      <aside className={`bg-[#0c0c0e] border-r border-zinc-800 flex flex-col justify-between transition-all duration-200 z-30 ${isSidebarOpen ? 'w-60' : 'w-16'}`}>
-        <div>
-          {/* Header */}
-          <div className="flex items-center justify-between p-3 border-b border-zinc-800">
-            {isSidebarOpen ? (
-              <div className="flex items-center space-x-2.5">
-                <div className="h-7 w-7 rounded border border-zinc-800 bg-[#161618] flex items-center justify-center text-zinc-300 shrink-0 shadow-inner">
-                  <svg className="h-4 w-4 text-zinc-350" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <div className="h-screen w-screen bg-[#030303] p-1.5 md:p-2 flex overflow-hidden text-[#f4f4f5] font-sans">
+      <div className="flex-1 flex bg-[#09090b] rounded-xl border border-zinc-900/50 overflow-hidden shadow-2xl">
+        {/* Sidebar */}
+        <aside className={`bg-[#060607] border-r border-zinc-900/20 flex flex-col justify-between transition-all duration-200 z-30 ${isSidebarOpen ? 'w-60' : 'w-16'}`}>
+          <div>
+            {/* Header (Logo Click Toggles Sidebar) */}
+            <div className="px-4.5 py-5 flex items-center justify-start">
+              <button 
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+                className="flex items-center space-x-2.5 text-left focus:outline-none transition duration-150 hover:opacity-85"
+                title={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+              >
+                <div className="h-6 w-6 rounded bg-zinc-900 flex items-center justify-center text-zinc-350 shrink-0">
+                  <svg className="h-3.5 w-3.5 text-zinc-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                     <path d="M12 2L4 10h16L12 2z" />
                     <path d="M12 22l8-8H4l8 8z" />
-                    <circle cx="12" cy="12" r="2.5" fill="currentColor" />
+                    <circle cx="12" cy="12" r="2" fill="currentColor" />
                   </svg>
                 </div>
-                <div>
-                  <h1 className="text-sm font-semibold tracking-tight text-zinc-200">
-                    Phoenix Workspace
-                  </h1>
-                </div>
-              </div>
-            ) : (
-              <div className="h-7 w-7 rounded border border-zinc-800 bg-[#161618] flex items-center justify-center text-zinc-350 mx-auto shadow-inner">
-                <svg className="h-4 w-4 text-zinc-350" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M12 2L4 10h16L12 2z" />
-                  <path d="M12 22l8-8H4l8 8z" />
-                  <circle cx="12" cy="12" r="2.5" fill="currentColor" />
-                </svg>
-              </div>
-            )}
-            
-            <button 
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-              className="text-zinc-500 hover:text-zinc-200 p-1 rounded hover:bg-zinc-900 transition"
-            >
-              <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>
+                {isSidebarOpen && (
+                  <span className="text-xs font-semibold tracking-[0.2em] text-zinc-250 uppercase select-none">
+                    Phoenix
+                  </span>
+                )}
+              </button>
+            </div>
 
-          {/* Project Switcher */}
-          <div className="p-3 border-b border-zinc-800">
-            {isSidebarOpen ? (
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
-                  <span>Projects</span>
-                  <button 
-                    onClick={() => setShowNewProjModal(true)} 
-                    className="text-blue-500 hover:text-blue-400 font-medium text-sm px-1.5 py-0.5 rounded hover:bg-zinc-800 transition"
-                  >
-                    + New
-                  </button>
-                </div>
-                
-                {projects.length === 0 ? (
-                  <button 
-                    onClick={() => setShowNewProjModal(true)} 
-                    className="w-full text-left text-xs bg-zinc-900/40 border border-zinc-800 p-2 rounded text-zinc-400 hover:border-zinc-700 transition"
-                  >
-                    + Create a Project
-                  </button>
-                ) : (
-                  <div className="flex items-center space-x-2">
-                    <select 
-                      value={activeProject?.id || ''} 
-                      onChange={(e) => {
-                        const proj = projects.find(p => p.id === e.target.value)
-                        if (proj) setActiveProject(proj)
-                      }}
-                      className="flex-1 bg-[#161618] border border-zinc-800 text-zinc-300 text-xs rounded px-2.5 py-2 outline-none focus:border-zinc-700 transition cursor-pointer"
-                    >
-                      {projects.map(p => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
-                    </select>
-                    <button 
-                      onClick={() => handleDeleteProject(activeProject?.id)}
-                      className="p-2 bg-[#161618] border border-zinc-800 hover:bg-red-950/20 hover:border-red-900/40 rounded text-zinc-400 hover:text-red-400 transition shrink-0"
-                      title="Delete active project"
-                    >
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
+            <div className="flex flex-col space-y-6 pt-1">
+              {/* Project Switcher */}
+              <div className="px-4.5 py-1">
+                {isSidebarOpen ? (
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-[9px] font-bold text-zinc-550 uppercase tracking-widest">
+                      <span>Workspace</span>
+                      <button 
+                        onClick={() => setCreateModalOpen(true)} 
+                        className="text-zinc-500 hover:text-zinc-200 font-semibold px-1 rounded transition duration-150"
+                      >
+                        + New
+                      </button>
+                    </div>
+                    
+                    {projects.length === 0 ? (
+                      <button 
+                        onClick={() => setCreateModalOpen(true)} 
+                        className="w-full text-left text-xs bg-zinc-900/30 border border-zinc-900/50 p-2 rounded text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-250 transition duration-150"
+                      >
+                        + Create Project
+                      </button>
+                    ) : (
+                      <div className="flex items-center space-x-1.5 relative">
+                        {/* Custom Workspace Dropdown Selector */}
+                        <div className="flex-1 relative">
+                          <button
+                            ref={workspaceTriggerRef}
+                            onClick={() => setIsWorkspaceDropdownOpen(!isWorkspaceDropdownOpen)}
+                            onKeyDown={handleWorkspaceKeyDown}
+                            className="w-full flex items-center justify-between bg-[#060607]/80 border border-zinc-850 hover:border-zinc-800 text-zinc-200 text-[11px] font-medium rounded-md px-2.5 py-1.5 transition cursor-pointer select-none outline-none focus:border-zinc-700"
+                            aria-haspopup="listbox"
+                            aria-expanded={isWorkspaceDropdownOpen}
+                            aria-label="Select workspace"
+                          >
+                            <span className="truncate max-w-[120px]">{activeProject?.name || 'Select Workspace'}</span>
+                            <span className="text-[8px] text-zinc-550 select-none ml-1">
+                              {isWorkspaceDropdownOpen ? '▲' : '▼'}
+                            </span>
+                          </button>
+
+                          {isWorkspaceDropdownOpen && (
+                            <div 
+                              ref={workspaceDropdownRef}
+                              className="absolute z-50 left-0 right-0 mt-1.5 bg-[#0e0e11] border border-zinc-850 rounded-lg shadow-2xl py-1 max-h-48 overflow-y-auto animate-slide-in"
+                              role="listbox"
+                            >
+                              {projects.map((p, idx) => (
+                                <div
+                                  key={p.id}
+                                  onClick={() => {
+                                    setActiveProject(p)
+                                    setIsWorkspaceDropdownOpen(false)
+                                    workspaceTriggerRef.current?.focus()
+                                  }}
+                                  onMouseEnter={() => setFocusedWorkspaceIndex(idx)}
+                                  className={`px-2.5 py-2 text-[11px] font-sans font-medium cursor-pointer flex items-center space-x-2 transition-colors duration-150 ${
+                                    idx === focusedWorkspaceIndex ? 'bg-zinc-900/50 text-zinc-150' : 'text-zinc-400'
+                                  }`}
+                                  role="option"
+                                  aria-selected={p.id === activeProject?.id}
+                                >
+                                  <span className={`w-3.5 h-3.5 text-[10px] font-bold text-emerald-500 flex items-center justify-center shrink-0 ${p.id === activeProject?.id ? 'opacity-100' : 'opacity-0'}`}>
+                                    ✓
+                                  </span>
+                                  <span className="truncate flex-1">{p.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <button 
+                          onClick={() => handleDeleteProject(activeProject?.id)}
+                          className="p-1.5 bg-zinc-900/60 border border-zinc-850 hover:bg-red-950/20 hover:border-red-900/40 rounded text-zinc-500 hover:text-red-400 transition shrink-0"
+                          title="Delete active project"
+                        >
+                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
                   </div>
+                ) : (
+                  <button 
+                    onClick={() => setCreateModalOpen(true)} 
+                    className="h-8 w-8 bg-zinc-900/60 border border-zinc-855 hover:bg-zinc-850 rounded flex items-center justify-center text-zinc-400 hover:text-zinc-200 mx-auto transition duration-150 text-xs font-semibold"
+                    title="Create Project"
+                  >
+                    +
+                  </button>
                 )}
               </div>
-            ) : (
-              <button 
-                onClick={() => setShowNewProjModal(true)} 
-                className="h-8 w-8 bg-[#161618] border border-zinc-800 hover:bg-zinc-800 rounded flex items-center justify-center text-zinc-400 hover:text-zinc-200 mx-auto transition text-sm"
-              >
-                +
-              </button>
-            )}
+
+              {/* Navigation Views */}
+              <div className="px-4.5 py-1 space-y-2">
+                {activeProject ? (
+                  <>
+                    {isSidebarOpen && (
+                      <div className="text-[9px] font-bold text-zinc-555 uppercase tracking-widest mb-0.5">
+                        Investigation
+                      </div>
+                    )}
+                    <nav className="space-y-1">
+                      <button 
+                        onClick={() => setView('chat')}
+                        className={`w-full flex items-center rounded-md px-3 py-1.5 text-xs font-medium transition duration-155 ${activeView === 'chat' ? 'bg-zinc-900 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/35'}`}
+                      >
+                        <svg className={`h-4 w-4 shrink-0 ${isSidebarOpen ? 'mr-2.5' : 'mx-auto'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        {isSidebarOpen && <span>Retrieval Console</span>}
+                      </button>
+
+                      <button 
+                        onClick={() => setView('vault')}
+                        className={`w-full flex items-center rounded-md px-3 py-1.5 text-xs font-medium transition duration-155 ${activeView === 'vault' ? 'bg-zinc-900 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/35'}`}
+                      >
+                        <svg className={`h-4 w-4 shrink-0 ${isSidebarOpen ? 'mr-2.5' : 'mx-auto'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                        </svg>
+                        {isSidebarOpen && <span>Document Vault</span>}
+                      </button>
+                    </nav>
+                  </>
+                ) : (
+                  <>
+                    {isSidebarOpen ? (
+                      <div className="space-y-1.5 p-3 rounded-lg bg-zinc-950/20 border border-zinc-900/60 text-left select-none">
+                        <div className="text-[9px] font-bold text-zinc-555 uppercase tracking-widest">
+                          No Active Project
+                        </div>
+                        <p className="text-[10px] text-zinc-500 leading-normal">
+                          Select or create a project to access investigation tools.
+                        </p>
+                      </div>
+                    ) : (
+                      <div 
+                        className="h-8 w-8 bg-zinc-900/10 border border-zinc-900/40 rounded flex items-center justify-center text-zinc-650 mx-auto transition duration-150 text-xs font-semibold cursor-not-allowed select-none"
+                        title="No active project. Select a workspace."
+                      >
+                        ∅
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Navigation Views */}
-          <nav className="p-2 space-y-1">
-            <button 
-              onClick={() => setView('chat')}
-              className={`w-full flex items-center rounded p-2.5 text-xs font-medium transition duration-150 group ${activeView === 'chat' ? 'bg-[#161618] border border-zinc-800 text-zinc-200' : 'text-zinc-400 border border-transparent hover:text-zinc-200 hover:bg-zinc-900/60'}`}
-            >
-              <svg className={`h-4 w-4 ${isSidebarOpen ? 'mr-2.5' : 'mx-auto'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-              {isSidebarOpen && <span>Retrieval Engine</span>}
-            </button>
-
-            <button 
-              onClick={() => setView('vault')}
-              className={`w-full flex items-center rounded p-2.5 text-xs font-medium transition duration-150 group ${activeView === 'vault' ? 'bg-[#161618] border border-zinc-800 text-zinc-200' : 'text-zinc-400 border border-transparent hover:text-zinc-200 hover:bg-zinc-900/60'}`}
-            >
-              <svg className={`h-4 w-4 ${isSidebarOpen ? 'mr-2.5' : 'mx-auto'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
-              </svg>
-              {isSidebarOpen && <span>Documents</span>}
-            </button>
-          </nav>
-        </div>
-
-        {/* Footer / User Profile & Logout */}
-        <div className="relative p-3 border-t border-zinc-800 bg-zinc-950/40 w-full flex items-center justify-between">
-          {/* Profile Menu Dropdown */}
-          {isProfileMenuOpen && (
-            <div className={`absolute bottom-16 left-3 bg-[#161618] border border-zinc-800 rounded-lg p-2 shadow-2xl z-50 animate-slide-in ${isSidebarOpen ? 'right-3' : 'w-48'}`}>
-              <div className="p-2 text-xs border-b border-zinc-800">
-                <p className="font-semibold text-zinc-300 truncate">{user?.username || 'User'}</p>
-                <p className="text-[10px] text-zinc-500 truncate mt-0.5">{user?.email || 'authenticated'}</p>
+          {/* Footer / User Profile & Logout */}
+          <div className="relative p-3 border-t border-zinc-900 bg-zinc-950/20 w-full flex items-center justify-between">
+            {/* Profile Menu Dropdown */}
+            {isProfileMenuOpen && (
+              <div className={`absolute bottom-16 left-3 bg-[#0e0e11] border border-zinc-855 rounded-lg p-2 shadow-2xl z-50 animate-slide-in ${isSidebarOpen ? 'right-3' : 'w-48'}`}>
+                <div className="p-2 text-xs border-b border-zinc-855 select-none">
+                  <p className="font-semibold text-zinc-300 truncate">{userDisplayName}</p>
+                  <p className="text-[10px] text-zinc-500 truncate mt-0.5">{user?.email || (userDisplayName !== user?.username ? user?.username : 'authenticated')}</p>
+                </div>
+                <button 
+                  onClick={handleLogout}
+                  className="w-full flex items-center space-x-2 px-2 py-1.5 mt-1 rounded text-left text-xs font-semibold text-zinc-400 hover:text-red-400 hover:bg-red-950/20 transition duration-150"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  <span>Sign Out</span>
+                </button>
               </div>
-              <button 
-                onClick={handleLogout}
-                className="w-full flex items-center space-x-2.5 p-2 mt-1 rounded text-left text-xs font-semibold text-zinc-400 hover:text-red-400 hover:bg-red-950/20 transition duration-150"
+            )}
+
+            {isSidebarOpen ? (
+              <div 
+                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                className="w-full flex items-center justify-between cursor-pointer group"
               >
-                <svg className="h-4 w-4" style={{ width: '16px', height: '16px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                <span>Sign Out</span>
-              </button>
-            </div>
-          )}
-
-          {isSidebarOpen ? (
-            <div 
-              onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-              className="w-full flex items-center justify-between cursor-pointer group"
-            >
-              <div className="flex items-center space-x-2 truncate">
-                <div className="h-7 w-7 rounded border border-zinc-700 bg-zinc-800 flex items-center justify-center font-semibold text-[10px] text-zinc-300 shrink-0 group-hover:border-zinc-500 transition">
-                  {user?.username?.substring(0, 2).toUpperCase() || 'US'}
+                <div className="flex items-center space-x-2.5 truncate">
+                  <div className="h-7 w-7 rounded bg-zinc-900 flex items-center justify-center font-bold text-[10px] text-zinc-350 shrink-0 group-hover:text-zinc-200 transition">
+                    {userInitials}
+                  </div>
+                  <div className="truncate max-w-[110px]">
+                    <p className="text-xs font-medium text-zinc-300 truncate group-hover:text-zinc-150 transition">{userDisplayName}</p>
+                    <p className="text-[9px] text-zinc-500 truncate">{user?.email || (userDisplayName !== user?.username ? user?.username : 'authenticated')}</p>
+                  </div>
                 </div>
-                <div className="truncate max-w-[110px]">
-                  <p className="text-xs font-medium text-zinc-250 truncate group-hover:text-zinc-150 transition">{user?.username || 'User'}</p>
-                  <p className="text-[9px] text-zinc-500 truncate">{user?.email || 'authenticated'}</p>
-                </div>
+                <button 
+                  type="button"
+                  className="text-zinc-500 hover:text-zinc-300 p-1 rounded transition duration-150"
+                  title="Profile options"
+                  aria-label="Profile options"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
+                  </svg>
+                </button>
               </div>
-              <button 
-                type="button"
-                className="text-zinc-500 hover:text-zinc-350 p-1.5 rounded transition"
+            ) : (
+              <div 
+                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                className="h-8 w-8 rounded bg-zinc-900 hover:bg-zinc-850 flex items-center justify-center text-zinc-350 cursor-pointer mx-auto transition duration-150 group"
                 title="Profile options"
-                aria-label="Profile options"
               >
-                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
-                </svg>
-              </button>
-            </div>
-          ) : (
-            <div 
-              onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-              className="h-8 w-8 rounded border border-zinc-800 bg-[#161618] hover:border-zinc-700 flex items-center justify-center text-zinc-350 cursor-pointer mx-auto transition group"
-              title="Profile options"
-            >
-              <span className="font-semibold text-[10px] text-zinc-400 group-hover:text-zinc-200">
-                {user?.username?.substring(0, 2).toUpperCase() || 'US'}
-              </span>
-            </div>
-          )}
-        </div>
-      </aside>
+                <span className="font-semibold text-[10px] text-zinc-400 group-hover:text-zinc-200 font-sans">
+                  {userInitials}
+                </span>
+              </div>
+            )}
+          </div>
+        </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col overflow-hidden relative">
-        {children}
-      </main>
+        {/* Main Content Area */}
+        <main className="flex-1 flex flex-col overflow-hidden relative">
+          {children}
+        </main>
+      </div>
 
       {/* New Project Modal */}
-      {showNewProjModal && (
+      {isCreateModalOpen && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#0c0c0e] border border-zinc-800 rounded-lg w-full max-w-sm p-5 shadow-2xl animate-fade-in">
+          <div className="bg-[#0c0c0e] border border-zinc-850 rounded-lg w-full max-w-sm p-5 shadow-2xl animate-fade-in">
             <h3 className="text-sm font-bold mb-3 text-zinc-200">
               Create New Project
             </h3>
@@ -304,29 +499,52 @@ export default function Layout({ children }) {
                 <input 
                   type="text" 
                   value={newProjName}
-                  onChange={(e) => setNewProjName(e.target.value)}
+                  onChange={(e) => {
+                    setNewProjName(e.target.value)
+                    if (createProjectError) setCreateProjectError(null)
+                  }}
                   placeholder="e.g. Gateway Service Auth v2"
-                  className="w-full bg-[#161618] border border-zinc-800 rounded px-3 py-2 text-xs text-zinc-200 placeholder-zinc-600 outline-none focus:border-blue-500/40 transition"
+                  className="w-full bg-zinc-900/85 border border-zinc-800 rounded px-3 py-2 text-xs text-zinc-250 placeholder-zinc-650 outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition disabled:opacity-50"
+                  disabled={isCreatingProject}
                   autoFocus
                 />
               </div>
+
+              {createProjectError && (
+                <div className="text-[10px] text-red-400 bg-red-955/10 border border-red-950/40 px-3 py-2 rounded-md flex items-center space-x-1.5 animate-slide-in select-none">
+                  <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{createProjectError}</span>
+                </div>
+              )}
               
               <div className="flex space-x-2.5 justify-end pt-1">
                 <button 
                   type="button" 
                   onClick={() => {
-                    setShowNewProjModal(false)
+                    if (isCreatingProject) return
+                    setCreateModalOpen(false)
                     setNewProjName('')
+                    setCreateProjectError(null)
                   }}
-                  className="px-3.5 py-1.5 text-xs text-zinc-400 hover:text-zinc-250 transition"
+                  className="px-3.5 py-1.5 text-xs text-zinc-500 hover:text-zinc-350 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                  disabled={isCreatingProject}
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
-                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded shadow transition"
+                  disabled={isCreatingProject || !newProjName.trim()}
+                  className="px-3.5 py-1.5 bg-zinc-100 hover:bg-white text-zinc-900 text-xs font-semibold rounded shadow transition flex items-center space-x-1.5 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed"
                 >
-                  Create Project
+                  {isCreatingProject && (
+                    <svg className="animate-spin h-3.5 w-3.5 text-zinc-500" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  )}
+                  <span>{isCreatingProject ? 'Creating...' : 'Create Project'}</span>
                 </button>
               </div>
             </form>
