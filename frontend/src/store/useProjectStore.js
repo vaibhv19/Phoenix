@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 
-const BACKEND_URL = 'http://localhost:8080/api'
-const FASTAPI_URL = 'http://localhost:8000/internal/v1'
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080/api'
 
 export const useProjectStore = create((set, get) => ({
   projects: [],

@@ -30,6 +30,7 @@ describe('ChatContainer Component tests', () => {
     activeProject: { id: 'proj-123', name: 'Phoenix Test App' },
     messages: [],
     documents: [{ id: 'doc-1', filename: 'doc.pdf', status: 'READY', chunkCount: 10 }],
+    activeDocument: { id: 'doc-1', filename: 'doc.pdf', status: 'READY', chunkCount: 10 },
     queryRAG: mockQueryRAG,
     isQuerying: false,
     clearChat: mockClearChat,

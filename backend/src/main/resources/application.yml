@@ -2,12 +2,10 @@ server:
   port: 8080
 
 spring:
-  profiles:
-    active: dev
   datasource:
-    url: jdbc:postgresql://localhost:5432/phoenix
-    username: postgres
-    password: postgres
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -26,7 +24,7 @@ logging:
 
 security:
   jwt:
-    secret-key: ${JWT_SECRET_KEY:dGhlLXBob2VuaXgtcmFnLWh5YnJpZC1yZXRyaWV2YWwtc3lzdGVtLXNlY3VyZS1rZXktMjAyNg==}
+    secret-key: ${JWT_SECRET_KEY}
     expiration-ms: 86400000 # 24 hours
     refresh-expiration-ms: 604800000 # 7 days
 

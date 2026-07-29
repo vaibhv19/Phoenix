@@ -1,8 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useProjectStore } from '../store/useProjectStore'
 
-// Helper to get fresh store state
+const originalFetch = global.fetch
 const getStore = () => useProjectStore.getState()
+
+afterEach(() => {
+  global.fetch = originalFetch
+})
 
 describe('useProjectStore - deleteProject', () => {
   beforeEach(() => {
@@ -19,10 +23,27 @@ describe('useProjectStore - deleteProject', () => {
   })
 
   it('successfully deletes a project via API and transitions active project', async () => {
-    // Setup mock fetch for DELETE
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ success: true }),
+    // Setup mock fetch for DELETE and side-effects
+    const fetchMock = vi.fn().mockImplementation((url) => {
+      if (url.includes('/projects/')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: true }),
+        })
+      }
+      if (url.includes('/documents')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([]),
+        })
+      }
+      if (url.includes('/chat/history')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([]),
+        })
+      }
+      return Promise.resolve({ ok: false })
     })
     global.fetch = fetchMock
 
@@ -61,10 +82,11 @@ describe('useProjectStore - deleteProject', () => {
     expect(localStorage.getItem('msgs_proj-1')).toBeNull()
   })
 
-  it('deletes mock project on API failure', async () => {
+  it('fails to delete a project on API failure', async () => {
     // Setup mock fetch that fails
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
+      json: () => Promise.resolve({ message: 'Delete forbidden' })
     })
     global.fetch = fetchMock
 
@@ -76,21 +98,12 @@ describe('useProjectStore - deleteProject', () => {
       activeProject: mockProjects[0],
     })
 
-    localStorage.setItem('mock_projects', JSON.stringify(mockProjects))
-    localStorage.setItem('docs_proj-1', JSON.stringify([{ id: 'doc-1' }]))
+    // Call deleteProject and expect it to throw
+    await expect(getStore().deleteProject('proj-1')).rejects.toThrow('Delete forbidden')
 
-    // Call deleteProject
-    await getStore().deleteProject('proj-1')
-
-    // Verify state cleaned up
-    expect(getStore().projects).toHaveLength(0)
-    expect(getStore().activeProject).toBeNull()
-    expect(getStore().documents).toHaveLength(0)
-
-    // Verify localStorage cleaned up
-    const storedProjects = JSON.parse(localStorage.getItem('mock_projects'))
-    expect(storedProjects).toHaveLength(0)
-    expect(localStorage.getItem('docs_proj-1')).toBeNull()
+    // Verify state is not cleaned up (retained on API failure)
+    expect(getStore().projects).toHaveLength(1)
+    expect(getStore().activeProject.id).toBe('proj-1')
   })
 })
 
