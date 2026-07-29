@@ -3,9 +3,12 @@ from typing import List, Dict, Any
 from sqlalchemy.orm import Session
 from sentence_transformers import SentenceTransformer
 from app.models import DocumentChunk
+from app.config import settings
 
 class EmbeddingService:
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+    def __init__(self, model_name: str = None):
+        if model_name is None:
+            model_name = settings.embedding_model
         self.model = SentenceTransformer(model_name)
 
     def embed_text(self, text: str) -> List[float]:

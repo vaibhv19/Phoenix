@@ -25,6 +25,6 @@ logging:
 security:
   jwt:
     secret-key: ${JWT_SECRET_KEY}
-    expiration-ms: 86400000 # 24 hours
-    refresh-expiration-ms: 604800000 # 7 days
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
 

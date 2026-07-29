@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     ollama_url: str = "http://localhost:11434"
     ollama_model: str = "mistral"
     flashrank_model: str = "ms-marco-MiniLM-L-6-v2"
+    embedding_model: str = "all-MiniLM-L6-v2"
 
     class Config:
         env_file = ".env"
