@@ -54,22 +54,22 @@ describe('ChatContainer Component tests', () => {
 
     render(<ChatContainer />)
 
-    expect(screen.getByText('No Active Project Selected')).toBeInTheDocument()
-    expect(screen.getByText(/Please create or select a project/)).toBeInTheDocument()
+    expect(screen.getByText('Initialize Investigation Workspace')).toBeInTheDocument()
+    expect(screen.getByText(/Phoenix is an engineering environment/)).toBeInTheDocument()
   })
 
   it('renders suggestions and input on initial load with no messages', () => {
     render(<ChatContainer />)
 
     expect(screen.getByText('Phoenix Test App')).toBeInTheDocument()
-    expect(screen.getByText('Workspace Diagnostic Summary')).toBeInTheDocument()
-    expect(screen.getByText('Verify deployment.yaml replicas config')).toBeInTheDocument()
+    expect(screen.getByText('Workspace')).toBeInTheDocument()
+    expect(screen.getByText('Engine')).toBeInTheDocument()
+    expect(screen.getByText('Verify replica configuration in deployment.yaml')).toBeInTheDocument()
     expect(screen.getByText('Optimize gateway rate limits rules')).toBeInTheDocument()
-    expect(screen.getByText('Rerank CORS configuration in WebConfig')).toBeInTheDocument()
-    expect(screen.getByText('What is the meaning of life')).toBeInTheDocument()
+    expect(screen.getByText('Trace CORS configurations in WebConfig.java')).toBeInTheDocument()
 
     // Test suggestion button click
-    const suggestionBtn = screen.getByText('Verify deployment.yaml replicas config').closest('button')
+    const suggestionBtn = screen.getByText('Verify replica configuration in deployment.yaml').closest('button')
     fireEvent.click(suggestionBtn)
     expect(mockQueryRAG).toHaveBeenCalledWith('Verify deployment.yaml replicas config')
   })
@@ -77,7 +77,7 @@ describe('ChatContainer Component tests', () => {
   it('submits query from the input text field', () => {
     render(<ChatContainer />)
 
-    const input = screen.getByPlaceholderText('Ask a technical question...')
+    const input = screen.getByPlaceholderText('Search index or ask an engineering question...')
     const submitBtn = screen.getByRole('button', { name: 'Submit query' })
 
     fireEvent.change(input, { target: { value: 'How to configure postgres?' } })
@@ -126,18 +126,18 @@ describe('ChatContainer Component tests', () => {
     expect(screen.getByText('How to scale application?')).toBeInTheDocument()
     expect(screen.getByText(/You can scale by updating replication factor/)).toBeInTheDocument()
 
-    // Verify confidence badge and console headers
+    // Verify confidence score and console headers
     expect(screen.getByText(/95%/)).toBeInTheDocument() // Confidence level
     expect(screen.getByText('Clear Console')).toBeInTheDocument()
 
     // Verify citation matrix rendering
-    expect(screen.getByText('Source Citations Matrix')).toBeInTheDocument()
+    expect(screen.getByText('Retrieved Evidence')).toBeInTheDocument()
     expect(screen.getByText('deployment.yaml')).toBeInTheDocument()
     expect(screen.getByText('p. 2')).toBeInTheDocument()
     expect(screen.getByText(/replicas: 3/)).toBeInTheDocument()
   })
 
-  it('collapses and expands the reasoning timeline trace', async () => {
+  it('renders the reasoning timeline trace in the inspector', () => {
     const messages = [
       {
         id: 'msg-2',
@@ -160,21 +160,9 @@ describe('ChatContainer Component tests', () => {
 
     render(<ChatContainer />)
 
-    // Initially, toggle button is 'View Retrieval Trace'
-    const toggleBtn = screen.getByText('View Retrieval Trace')
-    expect(screen.getByText('Retrieval Logic Execution Trace')).toBeInTheDocument() // rendered in DOM but hidden via style height in real browser
-
-    // Click to toggle
-    fireEvent.click(toggleBtn)
-
-    // Button updates to 'Hide Retrieval Trace'
-    expect(screen.getByText('Hide Retrieval Trace')).toBeInTheDocument()
+    // Trace is rendered in the Inspector sidebar
+    expect(screen.getByText('Execution Trace')).toBeInTheDocument()
     expect(screen.getByText('Found matching document.')).toBeInTheDocument()
-
-    // Collapse trace again
-    fireEvent.click(screen.getByText('Hide Retrieval Trace'))
-    // React state toggle should update wording back to 'View Retrieval Trace'
-    expect(screen.getByText('View Retrieval Trace')).toBeInTheDocument()
   })
 
   it('triggers clearChat when clicking the clear button', () => {
