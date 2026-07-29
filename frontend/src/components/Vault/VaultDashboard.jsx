@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { useProjectStore } from '../../store/useProjectStore'
 import UploadZone from './UploadZone'
+import EmptyWorkspace from '../Shared/EmptyWorkspace'
 
 export default function VaultDashboard() {
-  const { activeProject, documents, deleteDocument, fetchDocuments, isDeletingDoc } = useProjectStore()
+  const { activeProject, documents, deleteDocument, fetchDocuments, isDeletingDoc, isLoadingDocs } = useProjectStore()
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
   const [docToDelete, setDocToDelete] = useState(null)
   const [toast, setToast] = useState(null)
@@ -29,15 +30,7 @@ export default function VaultDashboard() {
   }, [showConfirmDelete])
 
   if (!activeProject) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-[#09090b]">
-        <svg className="h-10 w-10 text-zinc-700 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-        </svg>
-        <h3 className="text-sm font-bold text-zinc-300 mb-1.5">No Active Project Selected</h3>
-        <p className="text-xs text-zinc-500 max-w-xs">Please create or select a workspace project from the sidebar to access the document vault.</p>
-      </div>
-    )
+    return <EmptyWorkspace />
   }
 
   const handleDeleteClick = (doc) => {
@@ -59,116 +52,156 @@ export default function VaultDashboard() {
 
   // Calculate detailed ingestion status stage
   const getIngestionStage = (doc) => {
-    if (doc.status !== 'PROCESSING') return null
+    if (doc.status === 'READY') return 'Ready'
+    if (doc.status === 'FAILED') return 'Failed'
+    if (doc.status !== 'PROCESSING') return doc.status
     const ageMs = Date.now() - new Date(doc.createdAt).getTime()
-    if (ageMs < 4000) return 'Parsing layout...'
-    if (ageMs < 8000) return 'Splitting chunks...'
-    if (ageMs < 14000) return 'Generating embeddings...'
-    return 'Finalizing index...'
+    if (ageMs < 3000) return 'Uploading'
+    if (ageMs < 6000) return 'Parsing'
+    if (ageMs < 9000) return 'Extracting text'
+    if (ageMs < 12000) return 'Chunking'
+    if (ageMs < 15000) return 'Embedding'
+    return 'Indexing'
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto p-5 space-y-5 bg-[#09090b]">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto p-6 space-y-6 bg-[#09090b]">
       {/* Header */}
-      <div className="border-b border-zinc-800 pb-3">
-        <h2 className="text-base font-bold text-zinc-200">
+      <div className="border-b border-zinc-900 pb-3.5 select-none">
+        <h2 className="text-sm font-semibold text-zinc-200">
           Document Vault
         </h2>
-        <p className="text-[11px] text-zinc-500 mt-0.5">
-          Project: <span className="text-zinc-300 font-semibold">{activeProject.name}</span> &bull; Ingest technical PDF manuals and monitor parser status logs.
+        <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed font-sans">
+          Ingest technical PDF manuals, specifications, and layout catalogs into the workspace search index.
         </p>
       </div>
 
       {/* Upload Zone */}
       <UploadZone />
 
-      {/* Documents List */}
-      <div className="space-y-3">
-        <div className="flex justify-between items-center">
-          <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+      {/* Documents List / Pipeline Status Table */}
+      <div className="space-y-3.5">
+        <div className="flex justify-between items-center select-none">
+          <h3 className="text-[9px] font-bold text-zinc-555 uppercase tracking-widest">
             Ingested Documents ({documents.length})
           </h3>
           <button 
             onClick={() => fetchDocuments(activeProject.id)}
-            className="text-[10px] font-semibold text-blue-500 hover:text-blue-400 flex items-center space-x-1 transition"
-            title="Refresh document list"
+            className="text-[10px] font-semibold text-zinc-450 hover:text-zinc-200 flex items-center space-x-1 transition duration-150"
+            title="Refresh document status"
           >
             <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89" />
             </svg>
             <span>Refresh</span>
           </button>
         </div>
 
-        {documents.length === 0 ? (
-          <div className="glass-panel rounded p-6 text-center border border-zinc-800 bg-zinc-950/20">
-            <svg className="h-8 w-8 text-zinc-700 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        {isLoadingDocs ? (
+          <div className="overflow-hidden border border-zinc-900 rounded-lg bg-zinc-950/10 animate-pulse select-none">
+            <div className="bg-[#070708]/30 px-4 py-2.5 flex justify-between border-b border-zinc-900">
+              <div className="h-3.5 w-24 bg-zinc-800 rounded opacity-60"></div>
+              <div className="h-3.5 w-16 bg-zinc-800 rounded opacity-60"></div>
+              <div className="h-3.5 w-12 bg-zinc-800 rounded opacity-60"></div>
+            </div>
+            <div className="divide-y divide-zinc-950/40 px-4">
+              {[1, 2, 3].map((n) => (
+                <div key={n} className="py-3 flex justify-between items-center">
+                  <div className="h-3 w-48 bg-zinc-900 rounded opacity-50"></div>
+                  <div className="h-3 w-16 bg-zinc-900 rounded opacity-50"></div>
+                  <div className="h-3 w-12 bg-zinc-900 rounded opacity-50"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : documents.length === 0 ? (
+          <div className="p-8 text-center rounded-lg bg-zinc-950/10 border border-dashed border-zinc-900 select-none">
+            <svg className="h-6 w-6 text-zinc-700 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <p className="text-xs font-semibold text-zinc-400">Vault is Empty</p>
-            <p className="text-[11px] text-zinc-500 max-w-[240px] mx-auto mt-0.5">Upload technical manuals above to enable AI-powered hybrid search.</p>
+            <h4 className="text-xs font-semibold text-zinc-400">No specifications ingested</h4>
+            <p className="text-[11px] text-zinc-550 max-w-xs mx-auto mt-1 leading-relaxed">
+              Upload system manuals, API specs, or deployment configs (PDF) above to compile your workspace retrieval engine.
+            </p>
           </div>
         ) : (
-          <div className="space-y-1.5">
-            {documents.map((doc) => {
-              const stage = getIngestionStage(doc)
-              return (
-                <div 
-                  key={doc.id}
-                  className="glass-panel p-2.5 rounded border border-zinc-800 flex items-center justify-between hover:border-zinc-700 transition duration-150"
-                >
-                  <div className="flex items-center space-x-2.5 truncate">
-                    <div className="h-7 w-7 rounded border border-zinc-800 bg-[#161618] flex items-center justify-center text-zinc-400 shrink-0">
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <div className="truncate">
-                      <h4 className="text-xs font-medium text-zinc-250 truncate">{doc.filename}</h4>
-                      <p className="text-[9px] text-zinc-500 font-mono mt-0.5">
-                        Uploaded {new Date(doc.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-3 shrink-0">
-                    <div className="flex items-center space-x-2">
-                      {doc.status === 'PROCESSING' && (
-                        <div className="flex flex-col items-end">
-                          <span className="flex items-center space-x-1 bg-amber-950/20 border border-amber-900/30 text-amber-450 px-2 py-0.5 rounded text-[9px] font-medium tracking-wide uppercase font-mono">
-                            <span className="h-1 w-1 rounded-full bg-amber-500 animate-pulse"></span>
-                            <span>Processing</span>
-                          </span>
-                          {stage && <span className="text-[8px] text-zinc-500 font-mono mt-0.5">{stage}</span>}
+          <div className="overflow-hidden border border-zinc-900 rounded-lg bg-zinc-950/10">
+            <table className="min-w-full divide-y divide-zinc-950/60 text-left">
+              <thead className="bg-[#070708]/30 text-[9px] font-bold text-zinc-555 uppercase tracking-widest select-none">
+                <tr>
+                  <th scope="col" className="px-4 py-2.5">Document File</th>
+                  <th scope="col" className="px-4 py-2.5">Uploaded</th>
+                  <th scope="col" className="px-4 py-2.5">Chunks</th>
+                  <th scope="col" className="px-4 py-2.5">Pipeline Stage</th>
+                  <th scope="col" className="px-4 py-2.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-950/40 text-xs text-zinc-300">
+                {documents.map((doc) => {
+                  const stage = getIngestionStage(doc)
+                  return (
+                    <tr key={doc.id} className="hover:bg-zinc-900/10 transition duration-150">
+                      {/* File Name */}
+                      <td className="px-4 py-3 truncate max-w-xs font-medium text-zinc-200">
+                        <div className="flex items-center space-x-2.5">
+                          <svg className="h-3.5 w-3.5 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>
+                          <span className="truncate" title={doc.filename}>{doc.filename}</span>
                         </div>
-                      )}
-                      {doc.status === 'READY' && (
-                        <span className="flex items-center space-x-1 bg-emerald-950/25 border border-emerald-900/30 text-emerald-450 px-2 py-0.5 rounded text-[9px] font-medium tracking-wide uppercase font-mono">
-                          <span className="h-1 w-1 rounded-full bg-emerald-500"></span>
-                          <span>Ready</span>
-                        </span>
-                      )}
-                      {doc.status === 'FAILED' && (
-                        <span className="flex items-center space-x-1 bg-red-950/20 border border-red-900/30 text-red-400 px-2 py-0.5 rounded text-[9px] font-medium tracking-wide uppercase font-mono">
-                          <span className="h-1 w-1 rounded-full bg-red-500"></span>
-                          <span>Failed</span>
-                        </span>
-                      )}
-                    </div>
+                      </td>
 
-                    <button 
-                      onClick={() => handleDeleteClick(doc)}
-                      className="p-1.5 bg-zinc-900/40 border border-zinc-800/80 hover:bg-red-950/20 hover:border-red-900/30 rounded text-zinc-500 hover:text-red-400 transition"
-                      title="Delete document"
-                    >
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
+                      {/* Upload Time */}
+                      <td className="px-4 py-3 text-zinc-500 font-mono text-[11px] whitespace-nowrap">
+                        {new Date(doc.createdAt).toLocaleDateString()}
+                      </td>
+
+                      {/* Chunk Count */}
+                      <td className="px-4 py-3 font-mono text-zinc-400 text-[11px]">
+                        {doc.status === 'READY' ? `${doc.chunkCount} chunks` : '—'}
+                      </td>
+
+                      {/* Status Pipeline Stage */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {doc.status === 'READY' && (
+                          <span className="inline-flex items-center space-x-1.5 text-emerald-500 font-medium">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                            <span className="font-mono text-[10px] font-bold tracking-wide uppercase select-none">Ready</span>
+                          </span>
+                        )}
+                        {doc.status === 'FAILED' && (
+                          <span className="inline-flex items-center space-x-1.5 text-red-500 font-medium">
+                            <span className="h-1.5 w-1.5 rounded-full bg-red-500"></span>
+                            <span className="font-mono text-[10px] font-bold tracking-wide uppercase select-none">Failed</span>
+                          </span>
+                        )}
+                        {doc.status === 'PROCESSING' && (
+                          <span className="inline-flex items-center space-x-1.5 text-amber-500 font-medium">
+                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                            <span className="font-mono text-[10px] font-bold tracking-wide uppercase select-none">
+                              {stage}...
+                            </span>
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-4 py-3 text-right">
+                        <button 
+                          onClick={() => handleDeleteClick(doc)}
+                          className="p-1 rounded hover:bg-red-950/20 hover:border-red-900/40 text-zinc-500 hover:text-red-400 transition"
+                          title="Delete specification file"
+                        >
+                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
@@ -177,7 +210,7 @@ export default function VaultDashboard() {
       {showConfirmDelete && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="bg-[#0c0c0e] border border-zinc-800 rounded-lg w-full max-w-sm p-5 shadow-2xl">
-            <div className="flex items-center space-x-2.5 text-red-500 mb-3.5">
+            <div className="flex items-center space-x-2.5 text-red-500 mb-3.5 select-none">
               <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
@@ -190,7 +223,7 @@ export default function VaultDashboard() {
               <p>
                 This will permanently remove the manual <strong className="text-zinc-200">"{docToDelete?.filename}"</strong>, its parsed text chunks, and corresponding vector index embeddings.
               </p>
-              <p className="text-red-400/90 font-medium bg-red-950/20 border border-red-900/30 p-2 rounded">
+              <p className="text-red-400/90 font-medium bg-red-955/10 border border-red-900/30 p-2 rounded">
                 ⚠ This action cannot be undone.
               </p>
             </div>
@@ -234,13 +267,13 @@ export default function VaultDashboard() {
       {toast && (
         <div className="fixed bottom-5 right-5 z-50 p-4 rounded-lg border shadow-2xl animate-slide-in flex items-center space-x-3 max-w-sm backdrop-blur-md bg-[#0c0c0e]/95 border-zinc-800">
           {toast.type === 'success' ? (
-            <div className="h-7 w-7 rounded bg-green-950/40 border border-green-800/60 flex items-center justify-center text-green-400 shrink-0">
+            <div className="h-7 w-7 rounded bg-green-955/10 border border-green-800/60 flex items-center justify-center text-green-400 shrink-0">
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
           ) : (
-            <div className="h-7 w-7 rounded bg-red-950/40 border border-red-800/60 flex items-center justify-center text-red-400 shrink-0">
+            <div className="h-7 w-7 rounded bg-red-955/10 border border-red-800/60 flex items-center justify-center text-red-400 shrink-0">
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
