@@ -8,6 +8,7 @@ export const useProjectStore = create((set, get) => ({
   activeProject: null,
   documents: [],
   messages: [],
+  activeDocument: null,
   activeView: 'chat', // 'chat' | 'vault'
   isQuerying: false,
   isUploading: false,
@@ -15,6 +16,46 @@ export const useProjectStore = create((set, get) => ({
   isLoadingDocs: false,
   isCreateModalOpen: false,
   error: null,
+
+  setActiveDocument: (doc) => set({ activeDocument: doc }),
+
+  fetchChatHistory: async (projectId) => {
+    const token = localStorage.getItem('token')
+    try {
+      const response = await fetch(`${BACKEND_URL}/chat/history?projectId=${projectId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      if (!response.ok) throw new Error('Failed to fetch chat history')
+      const data = await response.json()
+      
+      const messages = []
+      // Reverse to render chronologically (oldest first)
+      const chats = [...data].reverse()
+      chats.forEach(chat => {
+        messages.push({
+          id: `msg-${chat.chatId}-user`,
+          sender: 'user',
+          text: chat.question || '',
+          timestamp: new Date().toISOString()
+        })
+        messages.push({
+          id: `msg-${chat.chatId}-ai`,
+          sender: 'assistant',
+          text: chat.answer || '',
+          confidenceScore: chat.confidenceScore,
+          reasoningTrace: chat.reasoningTrace || [],
+          matches: chat.matches || [],
+          timestamp: new Date().toISOString()
+        })
+      })
+      set({ messages })
+    } catch (err) {
+      console.warn("Failed to fetch chat history, using empty list:", err.message)
+      set({ messages: [] })
+    }
+  },
 
   setCreateModalOpen: (isOpen) => set({ isCreateModalOpen: isOpen }),
 
@@ -35,17 +76,8 @@ export const useProjectStore = create((set, get) => ({
         get().setActiveProject(data[0])
       }
     } catch (err) {
-      console.warn("Failed to fetch projects, using mock database:", err.message)
-      const stored = localStorage.getItem('mock_projects')
-      const projects = stored ? JSON.parse(stored) : [
-        { id: 'proj-1', name: 'Cloud Infrastructure Specs', createdAt: new Date().toISOString() },
-        { id: 'proj-2', name: 'API Gateway Protocols', createdAt: new Date().toISOString() }
-      ]
-      localStorage.setItem('mock_projects', JSON.stringify(projects))
-      set({ projects })
-      if (!get().activeProject) {
-        get().setActiveProject(projects[0])
-      }
+      set({ error: err.message })
+      throw err
     }
   },
 
@@ -75,20 +107,7 @@ export const useProjectStore = create((set, get) => ({
       get().setActiveProject(newProj)
       return newProj
     } catch (err) {
-      console.warn("Failed to create project via API:", err.message)
-      // Fallback to mock project creation only on network/connection issues (like 'Failed to fetch')
-      if (err.message === 'Failed to fetch' || err.message.includes('Failed to fetch')) {
-        const newProj = {
-          id: `proj-${Date.now()}`,
-          name,
-          createdAt: new Date().toISOString()
-        }
-        const updated = [...get().projects, newProj]
-        localStorage.setItem('mock_projects', JSON.stringify(updated))
-        set({ projects: updated })
-        get().setActiveProject(newProj)
-        return newProj
-      }
+      set({ error: err.message })
       throw err
     }
   },
@@ -132,47 +151,19 @@ export const useProjectStore = create((set, get) => ({
         set({ documents: [], messages: [] })
       }
     } catch (err) {
-      console.error("Project deletion error:", err)
-      const storedMock = localStorage.getItem('mock_projects')
-      if (storedMock) {
-        set(state => {
-          const remainingProjects = state.projects.filter(p => p.id !== projectId)
-          let newActiveProject = state.activeProject
-          if (state.activeProject?.id === projectId) {
-            newActiveProject = remainingProjects.length > 0 ? remainingProjects[0] : null
-          }
-          const projects = JSON.parse(storedMock).filter(p => p.id !== projectId)
-          localStorage.setItem('mock_projects', JSON.stringify(projects))
-          localStorage.removeItem(`docs_${projectId}`)
-          localStorage.removeItem(`msgs_${projectId}`)
-          return {
-            projects: remainingProjects,
-            activeProject: newActiveProject
-          }
-        })
-        const nextActive = get().activeProject
-        if (nextActive) {
-          get().setActiveProject(nextActive)
-        } else {
-          set({ documents: [], messages: [] })
-        }
-        return
-      }
+      set({ error: err.message })
       throw err;
     }
   },
 
   setActiveProject: (project) => {
-    set({ activeProject: project, documents: [], messages: [], isLoadingDocs: true })
+    set({ activeProject: project, documents: [], messages: [], activeDocument: null, isLoadingDocs: true })
     if (project) {
       // Fetch documents from backend
       get().fetchDocuments(project.id)
       
-      // Load messages from localStorage for this project
-      const storedMsgs = localStorage.getItem(`msgs_${project.id}`)
-      const messages = storedMsgs ? JSON.parse(storedMsgs) : []
-
-      set({ messages })
+      // Fetch query logs from DB
+      get().fetchChatHistory(project.id)
     } else {
       set({ isLoadingDocs: false })
     }
@@ -197,11 +188,16 @@ export const useProjectStore = create((set, get) => ({
       }))
       set({ documents })
       localStorage.setItem(`docs_${projectId}`, JSON.stringify(documents))
+
+      // Auto-set active document if none is active and there are ready documents
+      const activeDoc = get().activeDocument
+      const readyDoc = documents.find(d => d.status === 'READY')
+      if (readyDoc && (!activeDoc || !documents.some(d => d.id === activeDoc.id))) {
+        set({ activeDocument: readyDoc })
+      }
     } catch (err) {
-      console.warn("Failed to fetch documents from API, using cached data:", err.message)
-      const storedDocs = localStorage.getItem(`docs_${projectId}`)
-      const documents = storedDocs ? JSON.parse(storedDocs) : []
-      set({ documents })
+      set({ error: err.message })
+      throw err
     } finally {
       set({ isLoadingDocs: false })
     }
@@ -220,6 +216,11 @@ export const useProjectStore = create((set, get) => ({
     set({ documents: remainingDocs })
     localStorage.setItem(`docs_${activeProject.id}`, JSON.stringify(remainingDocs))
 
+    if (get().activeDocument?.id === docId) {
+      const nextActive = remainingDocs.find(d => d.status === 'READY') || null
+      set({ activeDocument: nextActive })
+    }
+
     try {
       const response = await fetch(`${BACKEND_URL}/documents/${docId}`, {
         method: 'DELETE',
@@ -236,14 +237,9 @@ export const useProjectStore = create((set, get) => ({
         throw new Error(errorMsg)
       }
     } catch (err) {
-      console.warn("Failed to delete document via API:", err.message)
-      // If it is a real server-side HTTP error response (not a connection/CORS issue like 'Failed to fetch'), revert the optimistic update and throw
-      if (err.message !== 'Failed to fetch' && !err.message.includes('Failed to fetch')) {
-        set({ documents: previousDocs })
-        localStorage.setItem(`docs_${activeProject.id}`, JSON.stringify(previousDocs))
-        throw err
-      }
-      // If it is 'Failed to fetch' (offline backend or CORS header response mismatch), we allow the optimistic deletion to succeed
+      set({ documents: previousDocs })
+      localStorage.setItem(`docs_${activeProject.id}`, JSON.stringify(previousDocs))
+      throw err
     } finally {
       set({ isDeletingDoc: false })
     }
@@ -289,22 +285,8 @@ export const useProjectStore = create((set, get) => ({
       // Start status polling
       get()._pollDocumentStatus(newDoc.id)
     } catch (err) {
-      console.warn("API Upload failed, creating mock document and simulating ingestion:", err.message)
-      const mockDoc = {
-        id: `doc-${Date.now()}`,
-        filename: file.name,
-        status: 'PROCESSING',
-        createdAt: new Date().toISOString()
-      }
-
-      set(state => {
-        const updated = [...state.documents, mockDoc]
-        localStorage.setItem(`docs_${activeProject.id}`, JSON.stringify(updated))
-        return { documents: updated }
-      })
-
-      // Start mock status polling
-      get()._pollDocumentStatusMock(mockDoc.id)
+      set({ error: err.message })
+      throw err
     } finally {
       set({ isUploading: false })
     }
@@ -340,7 +322,7 @@ export const useProjectStore = create((set, get) => ({
         }
       } catch (err) {
         clearInterval(interval)
-        get()._pollDocumentStatusMock(docId)
+        get()._updateDocStatus(docId, 'FAILED')
       }
     }, 2000)
   },
@@ -366,7 +348,8 @@ export const useProjectStore = create((set, get) => ({
 
   queryRAG: async (queryText) => {
     const activeProject = get().activeProject
-    if (!activeProject) return
+    const activeDocument = get().activeDocument
+    if (!activeProject || !activeDocument) return
     
     const userMsg = {
       id: `msg-${Date.now()}`,
@@ -377,26 +360,27 @@ export const useProjectStore = create((set, get) => ({
     
     set(state => {
       const updated = [...state.messages, userMsg]
-      localStorage.setItem(`msgs_${activeProject.id}`, JSON.stringify(updated))
       return { messages: updated, isQuerying: true }
     })
     
+    const token = localStorage.getItem('token')
     try {
-      const response = await fetch(`${FASTAPI_URL}/process`, {
+      const response = await fetch(`${BACKEND_URL}/chat/query`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
-          documentId: activeProject.id,
-          query: queryText,
-          limit: 5,
-          alpha: 0.7
+          documentId: activeDocument.id,
+          query: queryText
         })
       })
       if (!response.ok) throw new Error('RAG query failed')
       const data = await response.json()
       
       const aiMsg = {
-        id: `msg-${Date.now() + 1}`,
+        id: `msg-${data.chatId || Date.now() + 1}-ai`,
         sender: 'assistant',
         text: data.answer,
         confidenceScore: data.confidenceScore,
@@ -405,32 +389,25 @@ export const useProjectStore = create((set, get) => ({
         timestamp: new Date().toISOString()
       }
       
-      set(state => {
-        const updated = [...state.messages, aiMsg]
-        localStorage.setItem(`msgs_${activeProject.id}`, JSON.stringify(updated))
-        return { messages: updated }
-      })
+      set(state => ({
+        messages: [...state.messages, aiMsg]
+      }))
     } catch (err) {
-      console.warn("FastAPI query failed, fallback to interactive mock query logic:", err.message)
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      
-      const mockData = get()._generateMockRAGResponse(queryText)
-      
-      const aiMsg = {
-        id: `msg-${Date.now() + 1}`,
+      console.error("Gateway RAG query failed:", err.message)
+      const errorMsg = {
+        id: `msg-${Date.now() + 1}-error`,
         sender: 'assistant',
-        text: mockData.answer,
-        confidenceScore: mockData.confidenceScore,
-        reasoningTrace: mockData.reasoningTrace,
-        matches: mockData.matches,
+        text: `Error executing query: ${err.message}. Please verify the backend and retrieval services are operational.`,
+        confidenceScore: 0.0,
+        reasoningTrace: [
+          { state: 'FALLBACK_CLARIFY', confidenceScore: 0.0, description: `Gateway error: ${err.message}` }
+        ],
+        matches: [],
         timestamp: new Date().toISOString()
       }
-      
-      set(state => {
-        const updated = [...state.messages, aiMsg]
-        localStorage.setItem(`msgs_${activeProject.id}`, JSON.stringify(updated))
-        return { messages: updated }
-      })
+      set(state => ({
+        messages: [...state.messages, errorMsg]
+      }))
     } finally {
       set({ isQuerying: false })
     }
@@ -439,79 +416,6 @@ export const useProjectStore = create((set, get) => ({
   clearChat: () => {
     const activeProject = get().activeProject
     if (!activeProject) return
-    localStorage.removeItem(`msgs_${activeProject.id}`)
     set({ messages: [] })
-  },
-
-  _generateMockRAGResponse: (query) => {
-    const qLower = query.toLowerCase()
-    
-    if (qLower.includes('yaml') || qLower.includes('k8s') || qLower.includes('kubernetes')) {
-      return {
-        answer: "To deploy the microservices on Kubernetes, use the specifications defined in `deployment.yaml` [[p. 1 - YAML]](#match-1). Ensure that container resources are allocated correctly, setting a memory limit of `512Mi` [[p. 3 - YAML]](#match-2). High availability is configured using 3 replicas [[p. 12 - YAML]](#match-3).",
-        confidenceScore: 0.88,
-        reasoningTrace: [
-          { state: "INITIAL_RETRIEVAL", confidenceScore: 0.88, description: "Initial retrieval found direct semantic matches in deployment.yaml." },
-          { state: "ANSWER_GENERATION", confidenceScore: 0.88, description: "Retrieved chunks exceed the Green threshold (0.75). Synthesizing direct response." }
-        ],
-        matches: [
-          { id: 'match-1', chunkIndex: 1, content: "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: gateway-service\nspec:\n  replicas: 3", score: 0.88, chunk_metadata: { source: 'deployment.yaml', page: 1 } },
-          { id: 'match-2', chunkIndex: 3, content: "resources:\n  limits:\n    cpu: \"500m\"\n    memory: 512Mi", score: 0.82, chunk_metadata: { source: 'deployment.yaml', page: 3 } },
-          { id: 'match-3', chunkIndex: 12, content: "spec:\n  strategy:\n    type: RollingUpdate\n    rollingUpdate:\n      maxSurge: 1", score: 0.78, chunk_metadata: { source: 'deployment.yaml', page: 12 } }
-        ]
-      }
-    } else if (qLower.includes('rewrite') || qLower.includes('optimize') || qLower.includes('yellow')) {
-      return {
-        answer: "Based on the rewritten query 'gateway rate limit configuration', rate limits are set at 100 requests per minute per IP [[p. 5 - Gateway]](#match-4). Traffic throttling applies to both public and private APIs [[p. 9 - Gateway]](#match-5).",
-        confidenceScore: 0.76,
-        reasoningTrace: [
-          { state: "INITIAL_RETRIEVAL", confidenceScore: 0.58, description: "Initial retrieval confidence is 0.58 (Yellow range [0.50, 0.75)). Triggering query rewrite fallback." },
-          { state: "FALLBACK_REWRITE", confidenceScore: 0.76, description: "Rewrote query to 'gateway rate limit configuration'. Secondary retrieval confidence is 0.76 (Green)." },
-          { state: "ANSWER_GENERATION", confidenceScore: 0.76, description: "Generating answer using expanded query context." }
-        ],
-        matches: [
-          { id: 'match-4', chunkIndex: 5, content: "rate_limiting:\n  enabled: true\n  requests_per_min: 100\n  scope: ip", score: 0.76, chunk_metadata: { source: 'gateway_rules.conf', page: 5 } },
-          { id: 'match-5', chunkIndex: 9, content: "throttling:\n  burst_limit: 20\n  cool_down_sec: 10", score: 0.71, chunk_metadata: { source: 'gateway_rules.conf', page: 9 } }
-        ]
-      }
-    } else if (qLower.includes('rerank') || qLower.includes('orange') || qLower.includes('cross')) {
-      return {
-        answer: "After Cross-Encoder reranking, the database indicates that CORS issues can be resolved by adjusting `allowedOrigins` in `WebConfig.java` [[p. 15 - CORS]](#match-6). Ensure headers include `Authorization` [[p. 18 - CORS]](#match-7).",
-        confidenceScore: 0.52,
-        reasoningTrace: [
-          { state: "INITIAL_RETRIEVAL", confidenceScore: 0.42, description: "Initial retrieval confidence is 0.42 (Orange range [0.35, 0.50)). Initiating FlashRank reranking." },
-          { state: "RERANK_EVALUATION", confidenceScore: 0.52, description: "FlashRank Cross-Encoder reranking computed a top score of 0.52 (exceeding orange threshold of 0.50)." },
-          { state: "ANSWER_GENERATION", confidenceScore: 0.52, description: "Generating answer using reranked passages." }
-        ],
-        matches: [
-          { id: 'match-6', chunkIndex: 15, content: "registry.addMapping(\"/api/**\").allowedOrigins(\"*\").allowedMethods(\"GET\", \"POST\")", score: 0.52, chunk_metadata: { source: 'WebConfig.java', page: 15 } },
-          { id: 'match-7', chunkIndex: 18, content: "allowedHeaders(\"Content-Type\", \"Authorization\")", score: 0.48, chunk_metadata: { source: 'WebConfig.java', page: 18 } }
-        ]
-      }
-    } else if (qLower.includes('clarify') || qLower.includes('red') || qLower.includes('fail') || qLower.includes('what is the meaning of life')) {
-      return {
-        answer: "Could you please clarify your request? I found matches relating to WebConfig.java [[p. 15]](#match-6) or deployment.yaml [[p. 1]](#match-1), but they do not contain details regarding your search query.",
-        confidenceScore: 0.22,
-        reasoningTrace: [
-          { state: "INITIAL_RETRIEVAL", confidenceScore: 0.22, description: "Initial retrieval confidence is 0.22 (Red range < 0.35). Initiating clarification fallback." },
-          { state: "FALLBACK_CLARIFY", confidenceScore: 0.22, description: "Confidence is red. Aborting RAG synthesis to prevent hallucinations." },
-          { state: "CLARIFICATION_GENERATION", confidenceScore: 0.22, description: "Generated polite clarifying question." }
-        ],
-        matches: []
-      }
-    } else {
-      return {
-        answer: "The active system architecture incorporates a Spring Boot orchestrator [[p. 2 - Design]](#match-8) and a pgvector database [[p. 4 - Design]](#match-9) to coordinate ingestion. Chunks are generated dynamically from PDFs and scored via WLC fusion.",
-        confidenceScore: 0.81,
-        reasoningTrace: [
-          { state: "INITIAL_RETRIEVAL", confidenceScore: 0.81, description: "Initial retrieval completed. Confidence score: 0.81 (Green)." },
-          { state: "ANSWER_GENERATION", confidenceScore: 0.81, description: "Generating answer based on design_document.pdf context." }
-        ],
-        matches: [
-          { id: 'match-8', chunkIndex: 2, content: "The Spring Boot service exposes routes for project CRUD and handles authorization via JWT.", score: 0.81, chunk_metadata: { source: 'design_document.pdf', page: 2 } },
-          { id: 'match-9', chunkIndex: 4, content: "FastAPI chunks document text and inserts pgvector embeddings into PostgreSQL.", score: 0.79, chunk_metadata: { source: 'design_document.pdf', page: 4 } }
-        ]
-      }
-    }
   }
 }))

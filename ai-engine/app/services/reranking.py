@@ -2,15 +2,16 @@ from typing import List, Tuple, Dict, Any
 from app.models import DocumentChunk
 
 class RerankingService:
-    def __init__(self, provider: str = "mock"):
+    def __init__(self, provider: str = "mock", model_name: str = "ms-marco-MiniLM-L-6-v2"):
         self.provider = provider
+        self.model_name = model_name
         self.ranker = None
         
         if self.provider != "mock":
             try:
                 from flashrank import Ranker
-                # Initialize default lightweight model: ms-marco-MiniLM-L-6-v2
-                self.ranker = Ranker()
+                # Initialize default lightweight model
+                self.ranker = Ranker(model_name=self.model_name)
             except Exception:
                 # Fall back to mock on failure
                 self.provider = "mock"

@@ -26,8 +26,8 @@ public class PythonIngestionService {
         RestClient restClient = restClientBuilder.build();
 
         IngestRequest.IngestConfig config = IngestRequest.IngestConfig.builder()
-                .chunkSize(1000)
-                .chunkOverlap(200)
+                .chunkSize(800)
+                .chunkOverlap(150)
                 .build();
 
         IngestRequest ingestRequest = IngestRequest.builder()
@@ -57,6 +57,10 @@ public class PythonIngestionService {
             log.error("Network exception or server error during async ingestion for document: {}", document.getId(), e);
         }
 
-        documentRepository.save(document);
+        if (documentRepository.existsById(document.getId())) {
+            documentRepository.save(document);
+        } else {
+            log.warn("Document {} was deleted before async ingestion completed. Skipping database save.", document.getId());
+        }
     }
 }

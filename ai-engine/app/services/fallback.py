@@ -108,7 +108,7 @@ class FallbackOrchestrator:
                     confidenceScore=cs_2,
                     description=f"Secondary retrieval confidence {cs_2:.4f} below green threshold. Escalating to FlashRank reranking."
                 ))
-                return self._run_rerank(document_id, query, limit, alpha, reasoning_trace)
+                return self._run_rerank(document_id, rewritten_query, limit, alpha, reasoning_trace)
                 
         elif 0.35 <= cs_1 < 0.50:
             # Orange Path: FALLBACK_RERANK

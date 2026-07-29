@@ -4,7 +4,7 @@ import UploadZone from './UploadZone'
 import EmptyWorkspace from '../Shared/EmptyWorkspace'
 
 export default function VaultDashboard() {
-  const { activeProject, documents, deleteDocument, fetchDocuments, isDeletingDoc, isLoadingDocs } = useProjectStore()
+  const { activeProject, documents, deleteDocument, fetchDocuments, isDeletingDoc, isLoadingDocs, activeDocument, setActiveDocument } = useProjectStore()
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
   const [docToDelete, setDocToDelete] = useState(null)
   const [toast, setToast] = useState(null)
@@ -120,7 +120,7 @@ export default function VaultDashboard() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <h4 className="text-xs font-semibold text-zinc-400">No specifications ingested</h4>
-            <p className="text-[11px] text-zinc-550 max-w-xs mx-auto mt-1 leading-relaxed">
+            <p className="text-[11px] text-zinc-555 max-w-xs mx-auto mt-1 leading-relaxed">
               Upload system manuals, API specs, or deployment configs (PDF) above to compile your workspace retrieval engine.
             </p>
           </div>
@@ -133,6 +133,7 @@ export default function VaultDashboard() {
                   <th scope="col" className="px-4 py-2.5">Uploaded</th>
                   <th scope="col" className="px-4 py-2.5">Chunks</th>
                   <th scope="col" className="px-4 py-2.5">Pipeline Stage</th>
+                  <th scope="col" className="px-4 py-2.5">Context Scope</th>
                   <th scope="col" className="px-4 py-2.5 text-right">Actions</th>
                 </tr>
               </thead>
@@ -182,6 +183,24 @@ export default function VaultDashboard() {
                               {stage}...
                             </span>
                           </span>
+                        )}
+                      </td>
+
+                      {/* Context Scope (Active Selection) */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {doc.status === 'READY' ? (
+                          <button
+                            onClick={() => setActiveDocument(activeDocument?.id === doc.id ? null : doc)}
+                            className={`px-2.5 py-0.5 rounded text-[10px] font-mono font-bold border transition duration-150 ${
+                              activeDocument?.id === doc.id
+                                ? 'bg-emerald-955/20 text-emerald-500 border-emerald-900/30'
+                                : 'bg-zinc-950/20 text-zinc-500 border-zinc-900 hover:border-zinc-800 hover:text-zinc-300'
+                            }`}
+                          >
+                            {activeDocument?.id === doc.id ? 'Active' : 'Set Active'}
+                          </button>
+                        ) : (
+                          <span className="text-[10px] text-zinc-600 font-mono">Not Available</span>
                         )}
                       </td>
 

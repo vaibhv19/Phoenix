@@ -26,15 +26,8 @@ export const useAuthStore = create((set) => ({
       set({ token: data.token, user: data.user || { username }, isAuthenticated: true, isAuthLoading: false })
       return true
     } catch (err) {
-      // Resilient Fallback to Mock Auth if API is not running
-      console.warn("API login failed, falling back to mock authentication:", err.message)
-      await new Promise(resolve => setTimeout(resolve, 600)) // simulate network delay
-      const mockUser = { id: 'mock-user-123', username, email: `${username}@example.com` }
-      const mockToken = 'mock-jwt-token-xyz'
-      localStorage.setItem('token', mockToken)
-      localStorage.setItem('user', JSON.stringify(mockUser))
-      set({ token: mockToken, user: mockUser, isAuthenticated: true, isAuthLoading: false })
-      return true
+      set({ error: err.message, isAuthLoading: false })
+      throw err
     }
   },
 
@@ -55,15 +48,8 @@ export const useAuthStore = create((set) => ({
       set({ token: data.token, user: data.user || { username, email }, isAuthenticated: true, isAuthLoading: false })
       return true
     } catch (err) {
-      // Resilient Fallback to Mock Auth if API is not running
-      console.warn("API registration failed, falling back to mock authentication:", err.message)
-      await new Promise(resolve => setTimeout(resolve, 600))
-      const mockUser = { id: 'mock-user-123', username, email }
-      const mockToken = 'mock-jwt-token-xyz'
-      localStorage.setItem('token', mockToken)
-      localStorage.setItem('user', JSON.stringify(mockUser))
-      set({ token: mockToken, user: mockUser, isAuthenticated: true, isAuthLoading: false })
-      return true
+      set({ error: err.message, isAuthLoading: false })
+      throw err
     }
   },
 

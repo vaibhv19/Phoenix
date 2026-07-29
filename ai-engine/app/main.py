@@ -25,8 +25,15 @@ app.add_middleware(
 
 # Initialize singletons at startup
 embedding_service = EmbeddingService()
-llm_service = LLMService(provider="mock")
-reranking_service = RerankingService(provider="mock")
+llm_service = LLMService(
+    provider=settings.llm_provider,
+    url=settings.ollama_url,
+    model=settings.ollama_model
+)
+reranking_service = RerankingService(
+    provider=settings.reranker_provider,
+    model_name=settings.flashrank_model
+)
 
 class IngestConfig(BaseModel):
     chunkSize: int
@@ -109,14 +116,21 @@ def process_base_retrieval(
             alpha=request.alpha
         )
         
+        from app.models import Document
         matches = []
         for chunk, score in results:
+            doc = db.query(Document).filter(Document.id == chunk.document_id).first()
+            file_name = doc.file_name if doc else "document.pdf"
+            page_num = chunk.chunk_metadata.get("page_number", 1) if chunk.chunk_metadata else 1
             matches.append({
                 "id": str(chunk.id),
                 "documentId": str(chunk.document_id),
                 "chunkIndex": chunk.chunk_index,
                 "content": chunk.content,
-                "metadata": chunk.chunk_metadata,
+                "metadata": {
+                    "source": file_name,
+                    "page": page_num
+                },
                 "score": score
             })
             
@@ -151,14 +165,21 @@ def process_retrieval_flow(
             alpha=request.alpha
         )
         
+        from app.models import Document
         matches = []
         for chunk, score in result["matches"]:
+            doc = db.query(Document).filter(Document.id == chunk.document_id).first()
+            file_name = doc.file_name if doc else "document.pdf"
+            page_num = chunk.chunk_metadata.get("page_number", 1) if chunk.chunk_metadata else 1
             matches.append({
                 "id": str(chunk.id),
                 "documentId": str(chunk.document_id),
                 "chunkIndex": chunk.chunk_index,
                 "content": chunk.content,
-                "metadata": chunk.chunk_metadata,
+                "metadata": {
+                    "source": file_name,
+                    "page": page_num
+                },
                 "score": score
             })
             

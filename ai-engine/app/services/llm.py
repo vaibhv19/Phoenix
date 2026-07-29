@@ -77,19 +77,10 @@ class LLMService:
             if response.status_code == 200:
                 data = response.json()
                 return data["message"]["content"].strip()
-        except Exception:
-            # Silence exception and fallback to mock
-            pass
-            
-        # Fallback to mock on connection error or non-200 response
-        if "query rewriter" in system_prompt.lower():
-            return f"Optimized query: {user_prompt.split('Original Query: ')[-1]} with context"
-        elif "clarification" in system_prompt.lower():
-            topics = user_prompt.split("Top matching topics:\n")[-1].split("\n\n")[0]
-            return f"Could you please clarify if you mean {topics}?"
-        else:
-            query = user_prompt.split("Query: ")[-1].split("\n\n")[0]
-            return f"Mocked answer based on context for query: '{query}'"
+            else:
+                raise RuntimeError(f"Ollama returned status code {response.status_code}: {response.text}")
+        except Exception as e:
+            raise RuntimeError(f"Failed to connect to Ollama at {self.url} using model {self.model}: {str(e)}")
 
     def _get_mock_answer(self, query: str, contexts: List[str]) -> str:
         return f"Mocked answer based on context for query: '{query}'"

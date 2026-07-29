@@ -13,33 +13,34 @@ export default function ChatContainer() {
     queryRAG, 
     isQuerying, 
     clearChat,
-    isLoadingDocs
+    isLoadingDocs,
+    activeDocument
   } = useProjectStore()
-
+ 
   const [inputVal, setInputVal] = useState('')
   const [selectedMessageId, setSelectedMessageId] = useState(null)
   const chatEndRef = useRef(null)
-
+ 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isQuerying])
-
+ 
   if (!activeProject) {
     return <EmptyWorkspace />
   }
-
+ 
   const handleSend = (e) => {
     e.preventDefault()
     if (!inputVal.trim() || isQuerying) return
     queryRAG(inputVal.trim())
     setInputVal('')
   }
-
+ 
   const handleSuggestionClick = (query) => {
     if (isQuerying) return
     queryRAG(query)
   }
-
+ 
   const getActiveMessage = () => {
     if (selectedMessageId) {
       const msg = messages.find(m => m.id === selectedMessageId)
@@ -48,9 +49,9 @@ export default function ChatContainer() {
     const assistantMsgs = messages.filter(m => m.sender === 'assistant')
     return assistantMsgs[assistantMsgs.length - 1] || null
   }
-
+ 
   const activeAssistantMsg = getActiveMessage()
-
+ 
   const renderInputForm = (isCentered = false) => {
     return (
       <form onSubmit={handleSend} className="relative flex items-center w-full">
@@ -58,15 +59,15 @@ export default function ChatContainer() {
           type="text" 
           value={inputVal}
           onChange={(e) => setInputVal(e.target.value)}
-          placeholder={documents.length === 0 ? "Ingest specifications in the Document Vault to begin investigation..." : "Search index or ask an engineering question..."}
+          placeholder={!activeDocument ? "Select an active document in the Document Vault to begin RAG..." : "Search index or ask an engineering question..."}
           className={`w-full bg-[#121214] border border-zinc-800 focus:border-zinc-705 rounded-md pl-4 pr-11 py-3 text-xs text-zinc-250 placeholder-zinc-600 outline-none focus:ring-1 focus:ring-zinc-800/40 transition duration-155 disabled:opacity-50 disabled:cursor-not-allowed font-sans tracking-wide ${isCentered ? 'shadow-lg shadow-black/10' : ''}`}
-          disabled={isQuerying || documents.length === 0}
+          disabled={isQuerying || !activeDocument}
           aria-label="RAG query input field"
         />
         <button 
           type="submit"
-          disabled={!inputVal.trim() || isQuerying || documents.length === 0}
-          className={`absolute right-2.5 p-1.5 rounded-md transition duration-150 ${inputVal.trim() && !isQuerying && documents.length > 0 ? 'text-zinc-150 hover:text-white hover:bg-zinc-900/60' : 'text-zinc-655 bg-transparent cursor-not-allowed'}`}
+          disabled={!inputVal.trim() || isQuerying || !activeDocument}
+          className={`absolute right-2.5 p-1.5 rounded-md transition duration-150 ${inputVal.trim() && !isQuerying && activeDocument ? 'text-zinc-150 hover:text-white hover:bg-zinc-900/60' : 'text-zinc-655 bg-transparent cursor-not-allowed'}`}
           aria-label="Submit query"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -76,7 +77,7 @@ export default function ChatContainer() {
       </form>
     )
   }
-
+ 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden lg:grid lg:grid-cols-3">
       {/* Left Chat Column */}
@@ -90,9 +91,15 @@ export default function ChatContainer() {
               {activeProject.name}
             </h2>
             <span className="text-[10px] text-zinc-650 font-mono">/</span>
-            <span className="text-[10px] text-zinc-500 font-mono">
-              {documents.length} spec{documents.length !== 1 ? 's' : ''}
-            </span>
+            {activeDocument ? (
+              <span className="text-[10px] text-emerald-400 font-mono truncate max-w-[150px]" title={`Active Document: ${activeDocument.filename}`}>
+                {activeDocument.filename}
+              </span>
+            ) : (
+              <span className="text-[10px] text-red-500 font-mono animate-pulse">
+                No active context
+              </span>
+            )}
           </div>
           {messages.length > 0 && (
             <button 
