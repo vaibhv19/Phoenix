@@ -112,8 +112,12 @@ export default function Layout({ children }) {
           <div className="flex items-center justify-between p-3 border-b border-zinc-800">
             {isSidebarOpen ? (
               <div className="flex items-center space-x-2.5">
-                <div className="h-7 w-7 rounded border border-zinc-700 bg-zinc-800/50 flex items-center justify-center font-bold text-xs text-zinc-300">
-                  P
+                <div className="h-7 w-7 rounded border border-zinc-800 bg-[#161618] flex items-center justify-center text-zinc-300 shrink-0 shadow-inner">
+                  <svg className="h-4 w-4 text-zinc-350" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M12 2L4 10h16L12 2z" />
+                    <path d="M12 22l8-8H4l8 8z" />
+                    <circle cx="12" cy="12" r="2.5" fill="currentColor" />
+                  </svg>
                 </div>
                 <div>
                   <h1 className="text-sm font-semibold tracking-tight text-zinc-200">
@@ -122,8 +126,12 @@ export default function Layout({ children }) {
                 </div>
               </div>
             ) : (
-              <div className="h-7 w-7 rounded border border-zinc-700 bg-zinc-800/50 flex items-center justify-center font-bold text-xs text-zinc-300 mx-auto">
-                P
+              <div className="h-7 w-7 rounded border border-zinc-800 bg-[#161618] flex items-center justify-center text-zinc-350 mx-auto shadow-inner">
+                <svg className="h-4 w-4 text-zinc-350" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M12 2L4 10h16L12 2z" />
+                  <path d="M12 22l8-8H4l8 8z" />
+                  <circle cx="12" cy="12" r="2.5" fill="currentColor" />
+                </svg>
               </div>
             )}
             
