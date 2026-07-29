@@ -37,16 +37,12 @@ export default function ReasoningTimeline({ steps }) {
   }
 
   return (
-    <div className="p-3.5 bg-zinc-950/50 border border-zinc-800 rounded space-y-3 font-sans">
-      <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
-        Retrieval Logic Execution Trace
-      </h4>
-
+    <div className="space-y-3.5 font-sans py-1 select-none">
       <motion.div 
         variants={containerVariants}
         initial="hidden"
         animate="show"
-        className="relative border-l border-zinc-800 pl-4.5 ml-1.5 space-y-4"
+        className="relative border-l border-zinc-900 pl-4.5 ml-1.5 space-y-4"
       >
         {steps.map((step, idx) => {
           const config = getStateConfig(step.state)
@@ -54,7 +50,7 @@ export default function ReasoningTimeline({ steps }) {
             <motion.div 
               key={idx} 
               variants={itemVariants}
-              className="relative group"
+              className="relative"
             >
               <span className={`absolute -left-[27px] top-0.5 h-4 w-4 rounded-full border flex items-center justify-center text-[9px] font-bold font-mono ${config.bg}`}>
                 {idx + 1}
@@ -62,12 +58,12 @@ export default function ReasoningTimeline({ steps }) {
 
               <div className="space-y-0.5">
                 <div className="flex items-center space-x-2">
-                  <span className="text-xs font-semibold text-zinc-200">{config.label}</span>
-                  <span className="text-[10px] text-zinc-500 font-mono">
-                    CS: {step.confidenceScore.toFixed(2)}
+                  <span className="text-xs font-semibold text-zinc-300">{config.label}</span>
+                  <span className="text-[9px] text-zinc-550 font-mono">
+                    ({step.confidenceScore.toFixed(2)})
                   </span>
                 </div>
-                <p className="text-xs text-zinc-400 leading-relaxed">
+                <p className="text-[11px] text-zinc-500 leading-normal">
                   {step.description}
                 </p>
               </div>
