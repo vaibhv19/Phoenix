@@ -12,7 +12,11 @@ export const useProjectStore = create((set, get) => ({
   isQuerying: false,
   isUploading: false,
   isDeletingDoc: false,
+  isLoadingDocs: false,
+  isCreateModalOpen: false,
   error: null,
+
+  setCreateModalOpen: (isOpen) => set({ isCreateModalOpen: isOpen }),
 
   fetchProjects: async () => {
     const token = localStorage.getItem('token')
@@ -56,7 +60,14 @@ export const useProjectStore = create((set, get) => ({
         },
         body: JSON.stringify({ name, description })
       })
-      if (!response.ok) throw new Error('Failed to create project')
+      if (!response.ok) {
+        let errorMsg = 'Failed to create project'
+        try {
+          const errData = await response.json()
+          if (errData && errData.message) errorMsg = errData.message
+        } catch (_) {}
+        throw new Error(errorMsg)
+      }
       const newProj = await response.json()
       set(state => ({
         projects: [...state.projects, newProj]
@@ -64,17 +75,21 @@ export const useProjectStore = create((set, get) => ({
       get().setActiveProject(newProj)
       return newProj
     } catch (err) {
-      console.warn("Failed to create project via API, creating mock project:", err.message)
-      const newProj = {
-        id: `proj-${Date.now()}`,
-        name,
-        createdAt: new Date().toISOString()
+      console.warn("Failed to create project via API:", err.message)
+      // Fallback to mock project creation only on network/connection issues (like 'Failed to fetch')
+      if (err.message === 'Failed to fetch' || err.message.includes('Failed to fetch')) {
+        const newProj = {
+          id: `proj-${Date.now()}`,
+          name,
+          createdAt: new Date().toISOString()
+        }
+        const updated = [...get().projects, newProj]
+        localStorage.setItem('mock_projects', JSON.stringify(updated))
+        set({ projects: updated })
+        get().setActiveProject(newProj)
+        return newProj
       }
-      const updated = [...get().projects, newProj]
-      localStorage.setItem('mock_projects', JSON.stringify(updated))
-      set({ projects: updated })
-      get().setActiveProject(newProj)
-      return newProj
+      throw err
     }
   },
 
@@ -148,7 +163,7 @@ export const useProjectStore = create((set, get) => ({
   },
 
   setActiveProject: (project) => {
-    set({ activeProject: project })
+    set({ activeProject: project, documents: [], messages: [], isLoadingDocs: true })
     if (project) {
       // Fetch documents from backend
       get().fetchDocuments(project.id)
@@ -159,11 +174,12 @@ export const useProjectStore = create((set, get) => ({
 
       set({ messages })
     } else {
-      set({ documents: [], messages: [] })
+      set({ isLoadingDocs: false })
     }
   },
 
   fetchDocuments: async (projectId) => {
+    set({ isLoadingDocs: true })
     const token = localStorage.getItem('token')
     try {
       const response = await fetch(`${BACKEND_URL}/documents?projectId=${projectId}`, {
@@ -186,6 +202,8 @@ export const useProjectStore = create((set, get) => ({
       const storedDocs = localStorage.getItem(`docs_${projectId}`)
       const documents = storedDocs ? JSON.parse(storedDocs) : []
       set({ documents })
+    } finally {
+      set({ isLoadingDocs: false })
     }
   },
 
@@ -195,6 +213,13 @@ export const useProjectStore = create((set, get) => ({
     
     set({ isDeletingDoc: true })
     const token = localStorage.getItem('token')
+    
+    // Perform optimistic local state update immediately
+    const previousDocs = get().documents
+    const remainingDocs = previousDocs.filter(d => d.id !== docId)
+    set({ documents: remainingDocs })
+    localStorage.setItem(`docs_${activeProject.id}`, JSON.stringify(remainingDocs))
+
     try {
       const response = await fetch(`${BACKEND_URL}/documents/${docId}`, {
         method: 'DELETE',
@@ -210,20 +235,15 @@ export const useProjectStore = create((set, get) => ({
         } catch (_) {}
         throw new Error(errorMsg)
       }
-      
-      set(state => {
-        const remainingDocs = state.documents.filter(d => d.id !== docId)
-        localStorage.setItem(`docs_${activeProject.id}`, JSON.stringify(remainingDocs))
-        return { documents: remainingDocs }
-      })
     } catch (err) {
-      console.error("Failed to delete document via API:", err.message)
-      set(state => {
-        const remainingDocs = state.documents.filter(d => d.id !== docId)
-        localStorage.setItem(`docs_${activeProject.id}`, JSON.stringify(remainingDocs))
-        return { documents: remainingDocs }
-      })
-      throw err
+      console.warn("Failed to delete document via API:", err.message)
+      // If it is a real server-side HTTP error response (not a connection/CORS issue like 'Failed to fetch'), revert the optimistic update and throw
+      if (err.message !== 'Failed to fetch' && !err.message.includes('Failed to fetch')) {
+        set({ documents: previousDocs })
+        localStorage.setItem(`docs_${activeProject.id}`, JSON.stringify(previousDocs))
+        throw err
+      }
+      // If it is 'Failed to fetch' (offline backend or CORS header response mismatch), we allow the optimistic deletion to succeed
     } finally {
       set({ isDeletingDoc: false })
     }
