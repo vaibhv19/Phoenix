@@ -46,26 +46,26 @@ export default function AuthForm() {
       />
 
       {/* Split-Screen: Left Info Panel (Slightly Lighter Contrast) */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-16 border-r border-zinc-900 bg-[#0d0d10] relative z-10">
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-16 border-r border-zinc-900/40 bg-[#0d0d10] relative z-10">
         {/* Top: Branding Consistent Logo */}
-        <div className="flex items-center space-x-3">
-          <div className="h-7 w-7 rounded border border-zinc-800 bg-[#161618] flex items-center justify-center text-zinc-350 shrink-0 shadow-inner">
-            <svg className="h-4 w-4 text-zinc-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <div className="flex items-center space-x-3.5">
+          <div className="h-8 w-8 rounded border border-zinc-800 bg-[#161618] flex items-center justify-center text-zinc-350 shrink-0 shadow-inner">
+            <svg className="h-4.5 w-4.5 text-zinc-200" style={{ width: '18px', height: '18px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M12 2L4 10h16L12 2z" />
               <path d="M12 22l8-8H4l8 8z" />
               <circle cx="12" cy="12" r="2.5" fill="currentColor" />
             </svg>
           </div>
-          <span className="text-xs font-bold tracking-widest text-zinc-300 uppercase font-mono">Phoenix</span>
+          <span className="text-xs font-bold tracking-widest text-zinc-250 uppercase font-mono">Phoenix</span>
         </div>
 
         {/* Center: Storytelling / Product Explanation */}
-        <div className="max-w-md space-y-8 my-auto">
+        <div className="max-w-md space-y-8 my-auto pt-8">
           <div className="space-y-4">
             <h1 className="text-3xl font-semibold tracking-tight text-zinc-100 leading-tight">
               Understand documents, not just answers.
             </h1>
-            <p className="text-xs text-zinc-400 leading-relaxed max-w-sm">
+            <p className="text-xs text-zinc-300 leading-relaxed max-w-sm">
               Phoenix parses and catalogs manuals, specifications, and architecture guides, tracing every query response back to its exact segment. No guesswork, no hallucinations.
             </p>
           </div>
@@ -123,7 +123,7 @@ export default function AuthForm() {
         </div>
 
         {/* Bottom: Footer Info */}
-        <div className="text-[9px] font-mono tracking-wider text-zinc-500">
+        <div className="text-[9px] font-mono tracking-wider text-zinc-400">
           SECURE TECHNICAL VAULT &bull; VERSION 1.1.0
         </div>
       </div>
@@ -132,9 +132,9 @@ export default function AuthForm() {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 md:p-16 bg-[#070709] relative z-10">
         <div className="w-full max-w-sm space-y-8">
           {/* Mobile Header Branding (Visible on mobile only) */}
-          <div className="lg:hidden flex flex-col items-center text-center space-y-3 mb-6">
-            <div className="h-7 w-7 rounded border border-zinc-800 bg-[#161618] flex items-center justify-center text-zinc-350 shadow-inner">
-              <svg className="h-4 w-4 text-zinc-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <div className="lg:hidden flex flex-col items-center text-center space-y-3.5 mb-6">
+            <div className="h-8 w-8 rounded border border-zinc-800 bg-[#161618] flex items-center justify-center text-zinc-350 shadow-inner">
+              <svg className="h-4.5 w-4.5 text-zinc-200" style={{ width: '18px', height: '18px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M12 2L4 10h16L12 2z" />
                 <path d="M12 22l8-8H4l8 8z" />
                 <circle cx="12" cy="12" r="2.5" fill="currentColor" />
@@ -189,46 +189,49 @@ export default function AuthForm() {
           {/* Inputs Section (Sitting directly in right panel) */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
+              <label htmlFor="email-or-username-input" className="block text-[10px] font-medium text-zinc-550 uppercase tracking-widest cursor-pointer">
                 Email or Username
               </label>
               <input 
+                id="email-or-username-input"
                 type="text" 
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="developer"
-                className="w-full bg-[#0d0d10] border border-zinc-850 rounded px-3.5 py-2.5 text-xs text-zinc-200 placeholder-zinc-650 outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition"
+                className="w-full bg-[#0d0d10] border border-zinc-800/80 rounded px-3.5 py-2.5 text-xs text-zinc-200 placeholder-zinc-650 outline-none hover:border-zinc-700/40 focus:border-zinc-700 focus:ring-1 focus:ring-zinc-800/80 transition duration-150"
                 required
               />
             </div>
 
             {!isLoginTab && (
               <div className="space-y-1.5 animate-slide-in">
-                <label className="block text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
+                <label htmlFor="email-input" className="block text-[10px] font-medium text-zinc-550 uppercase tracking-widest cursor-pointer">
                   Email Address
                 </label>
                 <input 
+                  id="email-input"
                   type="email" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="dev@phoenix.io"
-                  className="w-full bg-[#0d0d10] border border-zinc-850 rounded px-3.5 py-2.5 text-xs text-zinc-200 placeholder-zinc-650 outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition"
+                  className="w-full bg-[#0d0d10] border border-zinc-800/80 rounded px-3.5 py-2.5 text-xs text-zinc-200 placeholder-zinc-650 outline-none hover:border-zinc-700/40 focus:border-zinc-700 focus:ring-1 focus:ring-zinc-800/80 transition duration-150"
                   required={!isLoginTab}
                 />
               </div>
             )}
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
+              <label htmlFor="password-input" className="block text-[10px] font-medium text-zinc-550 uppercase tracking-widest cursor-pointer">
                 Password
               </label>
               <div className="relative">
                 <input 
+                  id="password-input"
                   type={showPassword ? 'text' : 'password'} 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-[#0d0d10] border border-zinc-850 rounded pl-3.5 pr-10 py-2.5 text-xs text-zinc-200 placeholder-zinc-650 outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition"
+                  className="w-full bg-[#0d0d10] border border-zinc-800/80 rounded pl-3.5 pr-10 py-2.5 text-xs text-zinc-200 placeholder-zinc-650 outline-none hover:border-zinc-700/40 focus:border-zinc-700 focus:ring-1 focus:ring-zinc-800/80 transition duration-150"
                   required
                 />
                 <button
@@ -260,7 +263,7 @@ export default function AuthForm() {
             <button 
               type="submit" 
               disabled={isAuthLoading}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold py-2.5 px-4 rounded shadow transition-colors flex items-center justify-center space-x-2 outline-none focus:ring-1 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-[#070709] disabled:opacity-50"
+              className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 active:scale-[0.985] text-white text-xs font-semibold py-2.5 px-4 rounded shadow transition-all duration-150 flex items-center justify-center space-x-2 outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-1 focus:ring-offset-[#070709] disabled:opacity-50"
             >
               {isAuthLoading ? (
                 <>
