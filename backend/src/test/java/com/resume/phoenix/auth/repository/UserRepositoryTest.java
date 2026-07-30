@@ -23,6 +23,7 @@ class UserRepositoryTest {
     void testSaveAndFindByEmail() {
         // Given
         User user = User.builder()
+                .username("testrepo")
                 .email("test-repo@example.com")
                 .passwordHash("hashed-password-xyz")
                 .fullName("John Doe")
@@ -38,5 +39,15 @@ class UserRepositoryTest {
         assertThat(foundUser).isPresent();
         assertThat(foundUser.get().getFullName()).isEqualTo("John Doe");
         assertThat(foundUser.get().getPasswordHash()).isEqualTo("hashed-password-xyz");
+        assertThat(foundUser.get().getUsername()).isEqualTo("testrepo");
+
+        Optional<User> foundByUsername = userRepository.findByUsername("testrepo");
+        assertThat(foundByUsername).isPresent();
+
+        Optional<User> foundByEmailOrUsername1 = userRepository.findByEmailOrUsername("test-repo@example.com", "any");
+        assertThat(foundByEmailOrUsername1).isPresent();
+
+        Optional<User> foundByEmailOrUsername2 = userRepository.findByEmailOrUsername("any", "testrepo");
+        assertThat(foundByEmailOrUsername2).isPresent();
     }
 }

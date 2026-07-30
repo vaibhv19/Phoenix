@@ -7,6 +7,7 @@ export default function AuthForm() {
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [localError, setLocalError] = useState('')
 
@@ -17,20 +18,30 @@ export default function AuthForm() {
       setLocalError('Username and password are required.')
       return
     }
-    if (!isLoginTab && !email.trim()) {
-      setLocalError('Email is required for registration.')
-      return
+    if (!isLoginTab) {
+      if (!email.trim()) {
+        setLocalError('Email is required for registration.')
+        return
+      }
+      if (!confirmPassword.trim()) {
+        setLocalError('Confirm password is required.')
+        return
+      }
+      if (password !== confirmPassword) {
+        setLocalError('Passwords do not match.')
+        return
+      }
     }
 
-    let success
+    let result
     if (isLoginTab) {
-      success = await login(username.trim(), password)
+      result = await login(username.trim(), password)
     } else {
-      success = await register(username.trim(), email.trim(), password)
+      result = await register(username.trim(), email.trim(), password)
     }
 
-    if (!success) {
-      setLocalError(error || 'Authentication action failed.')
+    if (!result.success) {
+      setLocalError(result.error || 'Authentication action failed.')
     }
   }
 
@@ -189,11 +200,11 @@ export default function AuthForm() {
           {/* Inputs Section (Sitting directly in right panel) */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-1.5">
-              <label htmlFor="email-or-username-input" className="block text-[10px] font-medium text-zinc-550 uppercase tracking-widest cursor-pointer">
-                Email or Username
+              <label htmlFor={isLoginTab ? "email-or-username-input" : "username-input"} className="block text-[10px] font-medium text-zinc-550 uppercase tracking-widest cursor-pointer">
+                {isLoginTab ? 'Email or Username' : 'Username'}
               </label>
               <input 
-                id="email-or-username-input"
+                id={isLoginTab ? "email-or-username-input" : "username-input"}
                 type="text" 
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -253,6 +264,25 @@ export default function AuthForm() {
                 </button>
               </div>
             </div>
+
+            {!isLoginTab && (
+              <div className="space-y-1.5 animate-slide-in">
+                <label htmlFor="confirm-password-input" className="block text-[10px] font-medium text-zinc-550 uppercase tracking-widest cursor-pointer">
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <input 
+                    id="confirm-password-input"
+                    type={showPassword ? 'text' : 'password'} 
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-[#0d0d10] border border-zinc-800/80 rounded pl-3.5 pr-10 py-2.5 text-xs text-zinc-200 placeholder-zinc-650 outline-none hover:border-zinc-700/40 focus:border-zinc-700 focus:ring-1 focus:ring-zinc-800/80 transition duration-150"
+                    required={!isLoginTab}
+                  />
+                </div>
+              </div>
+            )}
 
             {(localError || error) && (
               <div className="text-[11px] text-red-400 bg-red-950/25 border border-red-900/30 px-3.5 py-2.5 rounded animate-slide-in">

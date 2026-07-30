@@ -18,16 +18,18 @@ export const useAuthStore = create((set) => ({
         body: JSON.stringify({ username, password })
       })
       if (!response.ok) {
-        throw new Error('Authentication failed')
+        const errorData = await response.json().catch(() => ({}))
+        const msg = errorData.error || errorData.message || 'Authentication failed'
+        throw new Error(msg)
       }
       const data = await response.json()
       localStorage.setItem('token', data.token)
       localStorage.setItem('user', JSON.stringify(data.user || { username }))
       set({ token: data.token, user: data.user || { username }, isAuthenticated: true, isAuthLoading: false })
-      return true
+      return { success: true }
     } catch (err) {
       set({ error: err.message, isAuthLoading: false })
-      throw err
+      return { success: false, error: err.message }
     }
   },
 
@@ -40,16 +42,21 @@ export const useAuthStore = create((set) => ({
         body: JSON.stringify({ username, email, password })
       })
       if (!response.ok) {
-        throw new Error('Registration failed')
+        const errorData = await response.json().catch(() => ({}))
+        let msg = errorData.error || errorData.message
+        if (!msg && errorData && typeof errorData === 'object') {
+          msg = Object.values(errorData).join(', ')
+        }
+        throw new Error(msg || 'Registration failed')
       }
       const data = await response.json()
       localStorage.setItem('token', data.token)
       localStorage.setItem('user', JSON.stringify(data.user || { username, email }))
       set({ token: data.token, user: data.user || { username, email }, isAuthenticated: true, isAuthLoading: false })
-      return true
+      return { success: true }
     } catch (err) {
       set({ error: err.message, isAuthLoading: false })
-      throw err
+      return { success: false, error: err.message }
     }
   },
 

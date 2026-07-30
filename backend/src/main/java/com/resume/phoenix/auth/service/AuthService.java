@@ -25,9 +25,13 @@ public class AuthService {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new IllegalArgumentException("Email is already registered");
         }
+        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
+            throw new IllegalArgumentException("Username is already taken");
+        }
 
         User user = User.builder()
                 .email(request.getEmail())
+                .username(request.getUsername())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .fullName(request.getFullName())
                 .build();
@@ -40,6 +44,7 @@ public class AuthService {
         UserDto userDto = UserDto.builder()
                 .id(savedUser.getId())
                 .email(savedUser.getEmail())
+                .username(savedUser.getUsername())
                 .fullName(savedUser.getFullName())
                 .build();
 
@@ -53,12 +58,12 @@ public class AuthService {
     public AuthResponse login(LoginRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
+                        request.getUsername(),
                         request.getPassword()
                 )
         );
 
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailOrUsername(request.getUsername(), request.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
 
         String jwtToken = jwtService.generateToken(user);
@@ -67,6 +72,7 @@ public class AuthService {
         UserDto userDto = UserDto.builder()
                 .id(user.getId())
                 .email(user.getEmail())
+                .username(user.getUsername())
                 .fullName(user.getFullName())
                 .build();
 

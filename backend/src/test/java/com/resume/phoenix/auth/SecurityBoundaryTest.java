@@ -54,6 +54,7 @@ class SecurityBoundaryTest {
 
         // Create User A
         userA = User.builder()
+                .username("usera")
                 .email("usera@example.com")
                 .passwordHash("passwordHashA")
                 .fullName("User A")
@@ -62,6 +63,7 @@ class SecurityBoundaryTest {
 
         // Create User B
         userB = User.builder()
+                .username("userb")
                 .email("userb@example.com")
                 .passwordHash("passwordHashB")
                 .fullName("User B")
