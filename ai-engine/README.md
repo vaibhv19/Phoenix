@@ -1,52 +1,60 @@
 # FastAPI AI & Retrieval Engine
 
-This module drives the heavy natural language processing (NLP) pipelines, dense vector encodings, sparse keyword scoring, re-ranking computations, and local LLM state orchestrations for Phoenix.
+This module coordinates the RAG ingestion pipeline, pgvector + BM25 hybrid searches, confidence scoring, query rewriting, reranking, and fallback state orchestration.
 
 ---
 
-## 1. Core Responsibilities & Retrieval Architecture
+## 1. Technical Overview
 
-The FastAPI engine hosts the RAG pipeline components:
-1. **Document Ingest & Parser**: Extracts layout text coordinates from uploaded PDFs via `pypdf`, split-chunks character sequences via `RecursiveCharacterTextSplitter` (size: 800, overlap: 150), and embeds segments via `all-MiniLM-L6-v2`.
-2. **Dual-Retrieval Core**:
-   * *Vector Search*: Cosine similarity computed against 384-dimensional dense vectors in PostgreSQL via `pgvector` operators (`<=>`).
-   * *Keyword Search*: Dynamic `rank_bm25` index built on-the-fly from the specific document's database chunks.
-3. **Score Fusion**: Normalizes BM25 scores via `MinMaxScaler` and blends them with vector similarity using a Weighted Linear Combination (WLC) ($\alpha = 0.7$).
-4. **Fallback Orchestrator State Machine**: Coordinates query degradation paths. Triggers query rewrites (Yellow), FlashRank reranking (Orange), or aborts synthesis to generate clarification prompts (Red) based on consensus confidence scores.
+The engine is built on **FastAPI** and integrates:
+1. **dense Semantic Embeddings**: Utilizes the local `all-MiniLM-L6-v2` transformer model (384 dimensions) to map chunk embeddings.
+2. **sparse Keyword Indices**: Employs `rank_bm25` in memory on-the-fly, scoped strictly to the current document ID.
+3. **WLC MinMaxScaler Fusion**: Normalizes BM25 scores and vector cosine similarities, combining them using a Weighted Linear Combination (WLC) formula ($\alpha=0.7$).
+4. **Confidence Matrix Evaluation**: Computes semantic consensus (MaxSim and agreement metrics) over top-retrieved documents.
+5. **Fallback Orchestrator State Machine**: Evaluates confidence and reranker scores, executing query rewrites (Yellow), FlashRank reranking (Orange), or clarifying prompts (Red) when needed.
 
 ---
 
 ## 2. Directory Layout
 
+All core components and retrieval logic are located in the [app](app) folder:
+
 ```text
 ai-engine/
 ├── app/
-│   ├── main.py              # FastAPI application server and REST routing
-│   ├── config.py            # Environment configurations (Pydantic Settings)
-│   ├── database.py          # SQLAlchemy Session and engine configurations
+│   ├── main.py              # FastAPI initialization and REST routes
+│   ├── config.py            # Pydantic Settings and database paths
+│   ├── database.py          # SQLAlchemy Session and engine configuration
 │   ├── models.py            # SQLAlchemy database tables mapping
 │   ├── services/
-│   │   ├── ingestion.py     # Document text slicing & embedding database inserts
-│   │   ├── search_vector.py # pgvector cosine similarity SQL queries
-│   │   ├── search_keyword.py# rank_bm25 dynamic indexing
-│   │   ├── fusion.py        # MinMaxScaler and WLC fusion formula
-│   │   ├── confidence.py    # MaxSim and Consensus Agreement calculator
-│   │   ├── llm.py           # Ollama client and prompt constructors
-│   │   └── fallback.py      # Tiered fallback state machine orchestrator
-│   └── tests/               # pytest test cases
-└── requirements.txt         # Package dependencies list
+│   │   ├── ingestion.py     # PDF parsing, recursive splitting, and vector insertion
+│   │   ├── search_vector.py # pgvector cosine similarity search queries
+│   │   ├── search_keyword.py# rank_bm25 index building and search
+│   │   ├── fusion.py        # MinMaxScaler score scaling and WLC combination
+│   │   ├── retrieval.py     # Hybrid search orchestration manager
+│   │   ├── confidence.py    # MaxSim matrices and Agreement scoring calculator
+│   │   ├── llm.py           # LLM API queries, rewrites, and clarification generation
+│   │   └── fallback.py      # Self-healing routing state machine
+│   └── tests/               # pytest suites and property sensitivity benchmark
+└── requirements.txt         # Pip dependency list
 ```
+
+* **V1 Entry Point**: API endpoints and routes are initialized in [app/main.py](app/main.py).
+* **Settings Manager**: Server configs are loaded via Pydantic in [app/config.py](app/config.py).
+* **Storage Ingestion**: Text chunking and embedding calculations occur in [app/services/ingestion.py](app/services/ingestion.py).
+* **Hybrid Core**: Retrieval and score logic resides in [app/services/retrieval.py](app/services/retrieval.py), [app/services/fusion.py](app/services/fusion.py), and [app/services/confidence.py](app/services/confidence.py).
+* **Recovery Routing**: Fallback pipelines are orchestrated in [app/services/fallback.py](app/services/fallback.py).
 
 ---
 
-## 3. Configuration & Startup
+## 3. Setup & Startup
 
 ### Prerequisites
 * Python 3.11+
-* Active PostgreSQL database running on port `5432` with the `vector` extension loaded.
+* Active PostgreSQL Database with `pgvector` extension
 
 ### 1. Installation
-Initialize a Python virtual environment and install core packages:
+Set up a virtual environment and install core packages:
 ```bash
 python -m venv .venv
 .venv\Scripts\activate      # Windows
@@ -54,27 +62,33 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-### 2. Configure Environment (`ai-engine/.env`)
-Ensure connection parameters match your database setup:
+### 2. Environment Variables
+Configure the database link in your terminal or env context in the [.env](.env) file:
 ```bash
 database_url=postgresql://postgres:postgres@localhost:5432/phoenix
-llm_provider=ollama
-reranker_provider=flashrank
-ollama_url=http://localhost:11434
-ollama_model=mistral
-flashrank_model=ms-marco-MiniLM-L-6-v2
-embedding_model=all-MiniLM-L6-v2
 ```
 
-### 3. Start Application
+### 3. Startup
+Start the FastAPI server using Uvicorn:
 ```bash
 python -m uvicorn app.main:app --port 8000 --reload
 ```
 
 ---
 
-## 4. Troubleshooting & Debugging
+## 4. REST Endpoints (Internal Interface)
 
-* **First-run Query Latency (ONNX Cache)**: The first time a query falls back to the Orange Path (FlashRank Reranking), FlashRank downloads the ONNX weights model from Hugging Face, causing a processing delay of up to 45 seconds. The model is cached locally for subsequent queries.
-* **Ollama Connection Refused**: If query generation crashes with connection errors, ensure the Ollama server is running locally on port `11434` (`ollama run mistral`).
-* **Timeout Incompatibilities**: Ensure the FastAPI uvicorn worker timeout is aligned with the Spring Boot RestClient read timeout (300 seconds) to prevent premature connection cancellations during weight loading.
+* `POST /internal/v1/ingest`: Triggers the parsing, character chunking, embedding generation, and vector insertion. Mapped in [app/main.py](app/main.py#L51).
+* `POST /internal/v1/process-base`: Runs primary hybrid vector + BM25 keyword search. Mapped in [app/main.py](app/main.py#L105).
+* `POST /internal/v1/process`: Executes the self-healing fallback orchestration. Mapped in [app/main.py](app/main.py#L152).
+
+---
+
+## 5. Testing & Benchmarking
+
+Execute the unit/integration tests and property sensitivity benchmark using:
+```bash
+.venv\Scripts\python -m pytest
+```
+* **[test_fallback.py](app/tests/test_fallback.py)**: Validates all state machine path transitions (Green, Yellow, Orange, Red).
+* **[test_sensitivity.py](app/tests/test_sensitivity.py)**: Runs a benchmark comparing Hybrid search accuracy against Vector search, asserting Hit Rate @ 1 metrics.
