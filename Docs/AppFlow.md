@@ -1,88 +1,97 @@
-# App Flow & Execution Lifecycles: Phoenix
+# Application Execution Lifecycles & Flows: Phoenix
 
-This document outlines the user journeys, data flow, and cross-service execution lifecycles for **Phoenix**. It details how the system transitions from document ingestion to hybrid retrieval, and specifically how it manages the "Transparent Fallback" mechanism.
+This document specifies the sequence of operations, data flows, and cross-service lifecycles implemented in **Phoenix**.
 
 ---
 
 ## 1. Document Ingestion Lifecycle
 
-This flow handles the transition of static PDF data into searchable, vector-indexed knowledge.
+This lifecycle converts a static PDF into a series of semantic vector embeddings and text indexes stored in PostgreSQL.
 
-1.  **Selection:** User selects a technical PDF via the Document Vault (React).
-2.  **Upload:** Frontend sends a `MultipartFile` to `POST /api/documents/upload` (React → Spring Boot).
-3.  **Validation:** API verifies file integrity, PDF headers, and size limits (Spring Boot).
-4.  **Metadata Initialization:** Create a document record with status `PROCESSING` in PostgreSQL (Spring Boot).
-5.  **Handoff:** Spring Boot forwards the file binary and internal ID to the AI Engine via `POST /ingest` (Spring Boot → Python).
-6.  **Text Extraction:** PDF text is extracted and cleaned of artifacts (Python).
-7.  **Chunking:** Text is broken into overlapping segments using `RecursiveCharacterTextSplitter` to preserve technical context (Python).
-8.  **Embedding:** Each chunk is converted into a 384-dimensional vector using `all-MiniLM-L6-v2` (Python).
-9.  **Indexing:** Vectors are stored in `pgvector`; keyword indices are updated for BM25 (Python).
-10. **Confirmation:** AI Engine sends a success callback to the API (Python → Spring Boot).
-11. **Ready State:** API updates document status to `READY`; user sees the document as active in the vault (Spring Boot → React).
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Dev/User
+    participant FE as React Client
+    participant BE as Spring Boot Gateway
+    participant DB as PostgreSQL (Flyway)
+    participant AI as FastAPI Engine
+    
+    User->>FE: Selects PDF & Clicks Upload
+    FE->>BE: POST /api/documents/upload (MultipartFile)
+    Note over BE: Validates size, format & project auth
+    BE->>DB: INSERT INTO documents (status=PROCESSING)
+    BE->>AI: Async POST /internal/v1/ingest (File + Doc ID)
+    BE-->>FE: Return 200 OK (PROCESSING status)
+    
+    activate AI
+    Note over AI: PDF Extraction & cleaning
+    Note over AI: RecursiveCharacterTextSplitter splits text
+    Note over AI: sentence-transformers embeds chunks
+    AI->>DB: INSERT INTO document_chunks (content, metadata, embedding)
+    AI-->>BE: Callback: Ingestion complete (success/chunks count)
+    deactivate AI
+    
+    BE->>DB: UPDATE documents SET status=READY, chunk_count=N
+    Note over FE: Polls GET /api/documents/{id}/status
+    DB-->>FE: Document status is READY
+    Note over FE: Renders document active in Vault UI
+```
 
 ---
 
-## 2. Hybrid Query Flow (Happy Path)
+## 2. Hybrid RAG Query & Fallback Lifecycle
 
-This flow occurs when the user query is specific and the system finds high-relevance matches.
-
-1.  **Input:** User types a technical question in the chat interface (React).
-2.  **Dispatch:** Frontend sends query and document context to `POST /api/chat/query` (React → Spring Boot).
-3.  **Retrieval Initiation:** API calls AI Engine `POST /process-query` (Spring Boot → Python).
-4.  **Hybrid Search:** AI Engine executes semantic vector search and BM25 keyword search in parallel (Python).
-5.  **Score Fusion:** Results are combined and normalized; a "Retrieval Confidence Score" is calculated (Python).
-6.  **Confidence Check:** Score exceeds the high-confidence threshold (e.g., > 0.75) (Python).
-7.  **Synthesis:** LLM generates a response strictly using the retrieved chunks (Python).
-8.  **Citation Mapping:** AI Engine maps answer segments back to specific chunk IDs and source pages (Python).
-9.  **Return:** Response object containing `answer`, `sources`, and `confidence_score` is returned (Python → Spring Boot → React).
-10. **Render:** Chat UI displays the answer with clickable source citations and a "High Confidence" badge (React).
-
----
-
-## 3. Low-Confidence & Fallback Flow
-
-When initial retrieval is ambiguous, the system executes a self-correction loop.
+This lifecycle represents the execution flow for user questions. The `FallbackOrchestrator` handles the retrieval score assessment and transitions between recovery states.
 
 ```mermaid
 graph TD
-    Start[Initial Hybrid Retrieval] --> C{Confidence?}
+    Start[User query: POST /api/chat/query] --> Retrieval[RetrievalService.retrieve_hybrid]
+    Retrieval --> VectorSearch[VectorSearchService: pgvector Cosine similarity]
+    Retrieval --> KeywordSearch[KeywordSearchService: rank_bm25]
+    VectorSearch --> Fusion[WLCFusion.fuse: Normalize & Combine]
+    KeywordSearch --> Fusion
+    Fusion --> Confidence[ConfidenceService: Compute CS]
     
-    C -- "> 0.75 (Green)" --> Gen[Direct Answer Generation]
+    Confidence --> Check{CS Threshold evaluation}
     
-    C -- "0.50 - 0.75 (Yellow)" --> Rew[Rewrite Query]
-    Rew --> H2[Re-run Hybrid Search]
-    H2 --> C2{Confidence > 0.75?}
-    C2 -- Yes --> Gen
-    C2 -- No --> Rerank
+    %% Green Path
+    Check -- "CS >= 0.75 (Green)" --> GenAnswer[LLMService.generate_answer]
+    GenAnswer --> Success[Return Answer + Citations]
     
-    C -- "0.35 - 0.50 (Orange)" --> Rerank[Cross-Encoder Re-rank]
-    Rerank --> C3{Score > 0.50?}
-    C3 -- Yes --> Gen
-    C3 -- No --> Clarify
+    %% Yellow Path
+    Check -- "0.50 <= CS < 0.75 (Yellow)" --> Rewrite[LLMService.rewrite_query]
+    Rewrite --> ReSearch[Re-run retrieve_hybrid with rewritten query]
+    ReSearch --> Check2{New CS >= 0.75?}
+    Check2 -- Yes --> GenAnswer
+    Check2 -- No --> EscRerank[Escalate to FlashRank Rerank]
     
-    C -- "< 0.35 (Red)" --> Clarify[Ask Clarifying Question]
+    %% Orange Path
+    Check -- "0.35 <= CS < 0.50 (Orange)" --> Rerank[RerankingService.rerank: Top 20 Candidates]
+    EscRerank --> Rerank
+    Rerank --> Check3{Top Reranked Score >= 0.50?}
+    Check3 -- Yes --> GenAnswer
+    Check3 -- No --> EscClarify[Escalate to Clarification]
+    
+    %% Red Path
+    Check -- "CS < 0.35 (Red)" --> Clarify[LLMService.generate_clarification]
+    EscClarify --> Clarify
+    Clarify --> AskUser[Return Clarifying Question back to user]
 ```
 
-1.  **Detection:** Initial retrieval yields a marginal confidence score (e.g., 0.58) or low confidence score (e.g., 0.42) (Python).
-2.  **Trace Logging:** A `ReasoningStepDto` object is initialized and logged into `reasoningTrace`: `{ "step": "INITIAL_RETRIEVAL", "action": "Hybrid search (Vector + BM25)", "outcome": "Marginal confidence (0.58) detected" }` (Python).
-3.  **Tiered Evaluation:**
-    *   **Marginal Confidence ($0.50 \le CS < 0.75$):** Triggers **Query Rewriting**. The system uses a "Query-to-Query" LLM prompt to expand abbreviations or clarify technical terms, then retries retrieval.
-    *   **Low Confidence ($0.35 \le CS < 0.50$) or Failed Rewrite:** Triggers **Cross-Encoder Re-ranking**. Top chunks from combined retrieval attempts are passed through a Cross-Encoder to identify relevant context.
-    *   **Terminal Low Confidence ($CS < 0.35$) or Failed Re-ranking:** Triggers **Clarifying Question**. The system aborts generation to prevent hallucination and asks the user for clarification.
-4.  **Final Evaluation:** If confidence remains below 0.50 after re-ranking, the system aborts generation and escalates to a clarifying question (Python).
-5.  **Handoff:** Return answer (or clarification question) + the complete `reasoningTrace` containing the list of `ReasoningStepDto` objects (Python → Spring Boot → React).
+### 2.1 Technical Step-by-Step Flow
 
----
-
-## 4. Fallback Reasoning Display (The Differentiator)
-
-This flow details how the UI surfaces the "System Thoughts" to the user to build trust.
-
-1.  **Data Reception:** React receives the payload containing the `reasoningTrace` array.
-2.  **Visual Trigger:** If `reasoningTrace` is non-empty, a "System Thought" toggle appears below the chat bubble (React).
-3.  **Step Rendering:** User clicks "View Reasoning"; the UI renders a vertical timeline of the self-correction steps (React):
-    *   **Step 1:** "Initial search for 'spring ddl' yielded marginal confidence (0.58)."
-    *   **Step 2:** "Rewriting query to 'Spring Boot Hibernate DDL auto configuration keys'..."
-    *   **Step 3:** "Secondary search failed to reach high confidence (0.48)."
-    *   **Step 4:** "Re-ranking top chunks using Cross-Encoder to recover relevance (0.65)."
-4.  **Transparency:** The UI explicitly highlights which chunk was chosen by BM25 (Exact Match) vs. Vector (Semantic), showing the user why the hybrid approach was necessary (React).
+1. **Query Submission**: React Client dispatches a JSON body to `POST /api/chat/query` containing the `documentId` and `query` string.
+2. **Gateway Verification**: The Spring Boot `ChatController` authenticates the request via the JWT token security filter and maps the principal. It delegates execution to `ChatService.queryRAG()`.
+3. **Internal Handoff**: `ChatService` calls `POST /internal/v1/process` on the Python FastAPI service.
+4. **Orchestration**: The FastAPI `process` route calls `FallbackOrchestrator.process_query()`:
+   * **Initial Retrieval**: Cosine similarity vectors (limit $k \times 2$) are fetched from database chunks via `VectorSearchService.search()` using the `pgvector` distance operator (`<=>`). BM25 keyword search is run in parallel over all chunks via `KeywordSearchService.search()`.
+   * **Fusion**: `WLCFusion.fuse()` normalizes BM25 scores and merges chunks using the Weighted Linear Combination formula.
+   * **Scoring**: `ConfidenceService.calculate_confidence()` computes the composite score: $CS = 0.6 \cdot MaxSim + 0.4 \cdot Agreement$.
+5. **State Decision**:
+   * **Green Path ($CS \ge 0.75$)**: Generates the answer directly using the LLM with the context chunks.
+   * **Yellow Path ($0.50 \le CS < 0.75$)**: Calls `llm_service.rewrite_query()` to generate a clarified query. Re-runs hybrid retrieval. If new confidence is high, generates the answer; otherwise, escalates to reranking.
+   * **Orange Path ($0.35 \le CS < 0.50$)**: Fetches the top 20 candidate chunks, reranks them using the FlashRank cross-encoder model, and evaluates the top score. If the top score $\ge 0.50$, it generates the answer; otherwise, it escalates to clarification.
+   * **Red Path ($CS < 0.35$)**: Gathers the top 3 vector chunks to identify close subjects, feeds them to `llm_service.generate_clarification()`, and yields a polite clarification query.
+6. **Timeline Logging**: At each state transition, the engine appends a `ReasoningStepDto` object detailing the state name, score, and transition description.
+7. **Client Rendering**: React receives the answer payload (containing the reasoning logs, confidence score, and citation indexes) and displays the message, badge, and collapsible reasoning timeline.

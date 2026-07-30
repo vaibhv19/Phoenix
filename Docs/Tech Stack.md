@@ -1,69 +1,76 @@
-# Tech Stack Specification: Phoenix
+# Technology Stack & Rationale: Phoenix
 
-This document details the technical specifications and architectural rationales for **Phoenix**. The stack is selected to highlight the integration between high-performance Java services and Python-based AI orchestration, specifically optimized for local execution and hybrid search transparency.
+This document specifies the software components, language runtimes, framework libraries, and local execution tools used to implement **Phoenix**, along with their design justifications.
 
 ---
 
-## 1. Backend Orchestration (Spring Boot API)
+## 1. Frontend Client Console (React)
 
-| Technology | Version | Rationale |
+The frontend is built as a single-page application (SPA) designed for fast Hot Module Replacement (HMR) and optimized build assets.
+
+| Dependency / Tool | Version | Design Justification |
 | :--- | :--- | :--- |
-| **Java (JDK)** | `21` | Utilizes Virtual Threads for non-blocking I/O when wait-states occur during Python AI engine REST calls. |
-| **Spring Boot** | `3.3.1` | Provides a robust framework for RESTful services, security, and transaction management. |
-| **Spring Security** | `6.x` | Implements stateless JWT authentication to manage user sessions without server-side state. |
-| **Spring Data JPA** | `3.x` | Standardizes data access to PostgreSQL for document metadata and query history. |
-| **Bean Validation** | `Hibernate Validator` | Enforces API contract integrity at the controller level (e.g., file size limits, required query fields). |
-| **Pagination** | `Spring Data Pageable` | Simplifies the management of large query history logs and document lists for frontend performance. |
+| **React** | `19.2` | Implements the client UI using the latest concurrent rendering optimizations for a responsive chat interface. |
+| **Vite** | `8.1` | Selected over Create React App (CRA) to support instantaneous local dev server startups via native ES modules. |
+| **Zustand** | `5.0` | Lightweight store-based state management that avoids the boilerplate of Redux while eliminating React Context re-render issues. |
+| **Tailwind CSS** | `3.4` | Utility-first CSS framework enabling high layout density (essential for our diagnostic metrics and split-screen consoles). |
+| **Framer Motion** | `12.4` | Animates the expandable "System Thought" panel to visually guide reviewers through the fallback state machine. |
+| **react-markdown** | `10.1` | Safely parses and renders Markdown responses from the LLM, maintaining monospace styling for technical syntax blocks. |
 
 ---
 
-## 2. AI & Retrieval Engine (Python)
+## 2. API & Service Gateway (Spring Boot)
 
-| Technology | Version | Rationale |
+The Java API gateway orchestrates secure user access, files database transactions, and manages async task handoffs to the AI engine.
+
+| Dependency / Library | Version | Design Justification |
 | :--- | :--- | :--- |
-| **Language** | `Python 3.11` | Balancing library stability (LangChain/PyTorch) with modern async performance. |
-| **Web Framework** | `FastAPI` | Asynchronous by default; provides automatic OpenAPI documentation and faster request/response cycles than Flask. |
-| **RAG Framework** | `LangChain` | Offers granular control over the "Retriever" interface, essential for implementing custom Hybrid (Vector + BM25) logic. |
-| **Chunking** | `RecursiveCharacterTextSplitter` | Intelligently splits technical text based on structural markers (newlines, periods) to preserve context. |
-| **Embedding Model** | `all-MiniLM-L6-v2` | A lightweight, local transformer model that provides sufficient semantic density for a demo without API costs or latency. |
-| **Keyword Search** | `rank_bm25` | Implements the industry-standard BM25 algorithm to capture exact technical identifiers (e.g., `application.yml` keys). |
-| **Re-ranking** | `FlashRank` | An ultra-lightweight Cross-Encoder used to re-score the combined Vector + BM25 results with minimal CPU overhead. |
+| **Java JDK** | `21` | Utilizes modern language features (such as pattern matching and virtual thread compatibility) to ensure future-proof efficiency. |
+| **Spring Boot** | `3.3.1` | Industry-standard framework for building robust REST services, dependency injection, and centralized configuration. |
+| **Spring Security** | `6.3` | Enforces stateless request authorization filters checking JWT header validity. |
+| **jjwt-api / impl** | `0.12.5` | Standardized library for building and parsing HMAC-SHA256 signed JSON Web Tokens. |
+| **Spring Data JPA** | `3.3` | Simplifies persistence operations using Hibernate ORM to connect to the PostgreSQL instance. |
+| **Flyway Core** | `10.15` | Version-controlled database migration framework that boots up schema migrations from `V1` to `V6` on startup. |
 
 ---
 
-## 3. Frontend Client (React)
+## 3. Python AI & Retrieval Engine (FastAPI)
 
-| Technology | Version | Rationale |
+The Python service isolates the text parsing, high-dimension embedding models, and local model inference logic.
+
+| Dependency / Library | Version | Design Justification |
 | :--- | :--- | :--- |
-| **Framework** | `React 19` | Leverages the latest concurrent rendering features for a responsive, real-time chat experience. |
-| **Build Tool** | `Vite` | Provides a significantly faster development experience (HMR) and optimized build chunks compared to CRA. |
-| **State Management** | `Zustand` | Offers a minimalist, store-based state management that is easier to debug and scale for chat-heavy applications. |
-| **UI Components** | `Tailwind CSS` | Enables rapid, utility-first styling for complex data-dense layouts like the "Reasoning Panel." |
-| **Markdown Display** | `react-markdown` | Correctiy renders LLM output, ensuring technical code blocks and citations are legible. |
-| **Visual Indicators** | `Framer Motion` | Used specifically to animate the "System Thought" transitions, making fallback logic visual for the user. |
+| **Python** | `3.11` | Ensures optimal support for deep learning frameworks (`PyTorch`, `sentence-transformers`) and async I/O loops. |
+| **FastAPI** | `0.100` | High-performance, asynchronous web framework that generates automatic OpenAPI schemas. |
+| **SQLAlchemy** | `2.0` | Python SQL Toolkit mapping ORM models (`DocumentChunk`) to execute SQL vector distance operators. |
+| **pgvector** | `0.2` | Python library facilitating integration with PostgreSQL's vector operations. |
+| **sentence-transformers**| `2.2` | Drives local execution of the `all-MiniLM-L6-v2` embedding model. |
+| **rank_bm25** | `0.2` | Implements the BM25 Okapi model to retrieve document chunks matching exact alphanumeric technical tokens. |
+| **flashrank** | `0.2` | Ultra-lightweight Cross-Encoder ranker used to perform CPU-bound re-ranking of fused query batches. |
+| **pypdf** | `3.0` | Lightweight binary parser to extract raw text coordinates from uploaded documents. |
 
 ---
 
-## 4. Data & Local Infrastructure
+## 4. Local Infrastructure & Data Layer
 
-| Storage Layer | Technology | Context |
-| :--- | :--- | :--- |
-| **Primary Database** | `PostgreSQL 16` | Standard relational storage for users, metadata, and audit logs. |
-| **Vector Extension** | `pgvector` | Enables vector similarity searches directly within SQL, allowing for complex Joins between metadata and vectors. |
-| **Containerization** | `Docker Compose` | Manages the orchestration of the Spring API, FastAPI, and Postgres services in a unified local network. |
+Phoenix runs 100% locally to eliminate API subscription fees and ensure data privacy.
+
+* **PostgreSQL 16**: Primary data repository. Holds users, projects, and documents metadata tables.
+* **pgvector Extension**: Extends PostgreSQL to store 384-dimension float vectors and calculate cosine distance via database operators:
+  * Uses the `<=>` operator (cosine distance) mapped as `(1.0 - (embedding <=> query_vector))` to compute Cosine Similarity in a single database query.
+* **Docker Compose**: Wires up the PostgreSQL container on a local bridged network (`localhost:5432`).
+* **Ollama (Inference)**: Run on the host system at `http://localhost:11434` loading the local `mistral` LLM, which keeps all inference compute completely local.
 
 ---
 
-## 5. Architectural Rationales: The "Interview" Defense
+## 5. Architectural Trade-offs & Decisions
 
-### 5.1 Why `pgvector` over Pinecone or FAISS?
-For a portfolio project focused on **transparency and integration**, `pgvector` is the superior choice for three reasons:
-1.  **Reduced Complexity:** It eliminates the need for a third service. I can manage document metadata (Spring Boot) and document embeddings (Python) in the same database instance.
-2.  **Hybrid Querying:** Unlike FAISS, which is a flat-file index, `pgvector` allows me to write a single SQL query that filters by `user_id` or `upload_date` *while* performing a vector similarity search. 
-3.  **Real-World Pattern:** Most enterprises are moving toward "Vector-enabled relational databases" to avoid the data consistency issues inherent in syncing a separate vector store like Pinecone.
+### 5.1 Local pgvector vs. Standalone Vector Database (Pinecone, Milvus)
+1. **Zero Synced State Overhead**: Using `pgvector` allows document chunks and metadata rows to reside in the exact same database. Deleting a Project cascades physical file cleanups and database row removals in a single transaction.
+2. **Simplified Infrastructure**: A standalone cloud database like Pinecone requires network authentication, data synchronization, and monthly costs. `pgvector` runs locally in Docker alongside PostgreSQL.
 
-### 5.2 Hybrid Search (Vector + BM25) vs. Vector-Only
-Vector search is great for "What is the general concept of X?" but fails at "Where is the `config.datasource.url` property defined?" because embeddings often squash specific alphanumeric strings into similar vector spaces. By using `rank_bm25` in parallel, I ensure that if a user types an exact technical term, it is prioritized regardless of its semantic embedding.
+### 5.2 BM25 Okapi on-the-fly vs. Elasticsearch / Meilisearch
+Since the application scope is defined as **single-document RAG queries**, building the BM25 keyword index on-the-fly from the database chunks of the active document (typically 10-150 chunks) is extremely fast (< 1.5ms) and eliminates the need to run, configure, and synchronize a separate Elasticsearch or Meilisearch container.
 
-### 5.3 The "Reasoning Panel" Strategy
-Rather than hiding the RAG complexity, the React frontend is designed to "show the work." When a confidence score falls below a threshold (e.g., 0.75), the UI doesn't just show a fallback answer; it triggers a **Framer Motion** animation that reveals the system's internal decision to rewrite the query. This demonstrates **graceful uncertainty**, a key requirement for production-grade AI.
+### 5.3 Ollama Local Host vs. OpenAI API
+Using OpenAI's API exposes sensitive technical documents to external cloud APIs and incurs variable costs. Running Ollama locally with `mistral` provides consistent local execution, complete offline capability, and zero inference costs.

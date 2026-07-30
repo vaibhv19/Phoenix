@@ -1,34 +1,62 @@
-# Phoenix — Feature List
+# System Feature Specification: Phoenix
 
-## Spring Boot API Layer (Java Backend / Full Stack)
+This document defines the functional capabilities implemented in the **Phoenix** architecture, structured by system layer and service boundaries.
 
-- Auth (JWT)
-- User & project management (including Project Deletion with cascading physical file and database chunk/embedding cleanups)
-- Document upload handling (PDFs → passed to AI engine for processing)
-- Internal API contract to Python AI Engine (REST)
-- Stores metadata: documents, chunks reference, query history
-- Core engineering: validation, exception handling, pagination
+---
 
-## React Frontend (completes Full Stack)
+## 1. Spring Boot API Layer (Java Platform)
 
-- Upload documents
-- Ask questions / chat interface
-- Show retrieved sources + confidence level
-- Show fallback reasoning when retrieval had to self-correct (this is the differentiator — surface why the system did what it did, not just the final answer)
+The Spring Boot backend serves as the database orchestrator, security gatekeeper, and asynchronous bridge to the Python AI Engine.
 
-## Python AI Engine (AI Engineer dedicated / Python AI Eng)
+* **Stateless JWT Security**:
+  * *Registration Flow*: Validates `Username`, `Email`, `Password`, and `Confirm Password` before creation. Password is encrypted using `BCryptPasswordEncoder` (12 rounds).
+  * *Login Flow*: Resolves credentials through `findByEmailOrUsername` mapping. Issues a stateless JWT signed with a HS256 key.
+* **Username-First User Identity**:
+  * Extends standard Spring Security `UserDetails` where the primary identifier (`getUsername()`) returns the unique `username`.
+  * Profile widgets, avatars, and sidebar headers derive initials and display text exclusively from the registered `username`.
+* **Workspace & Project Management**:
+  * Project creation, retrieval, and cascading deletion.
+  * *Cascading Deletion*: Deleting a project triggers a database transaction that deletes all project metadata, cascaded document rows, and physical files stored in the local upload folder, simultaneously triggering cleaning of the Python AI engine's vector tables.
+* **Document Upload & Storage Handler**:
+  * Handles multipart PDF uploads via `POST /api/documents/upload`.
+  * Persists document records to PostgreSQL with states (`PROCESSING` -> `READY` or `FAILED`).
+  * Stores files in the local filesystem storage path (`backend/storage`).
+* **Asynchronous AI Engine Handoff**:
+  * Invokes the Python AI engine's `/internal/v1/ingest` asynchronously using Spring's task execution thread pool.
+  * Polls ingestion status to update database state without blocking thread context.
 
-- Document ingestion: chunking + embeddings
-- Vector store (Pinecone/pgvector/FAISS)
-- Hybrid search: vector + keyword (BM25), not vector-only
-- Confidence scoring on retrieved chunks
-- Fallback strategies triggered on low confidence:
-  - Query rewriting (reformulate and retry)
-  - Re-ranking retrieved chunks
-  - Ask user a clarifying question instead of guessing
-- Source citations in every answer
-- Design principle: system should know when it doesn't know, rather than always answering confidently
+---
 
-## Domain
+## 2. Python AI Engine (AI & Retrieval Layer)
 
-RAG over technical docs (Spring Boot / AWS) — chosen because exact-match terms (config keys, exception names) let you concretely demonstrate hybrid search beating vector-only search.
+The FastAPI engine hosts the heavy embedding computations, vector searches, reciprocal keyword scores, and LLM interfaces.
+
+* **Intelligent Document Ingestion**:
+  * Extracts PDF content and slices text using a `RecursiveCharacterTextSplitter` (chunk size: 800, overlap: 150) preserving structure.
+  * Embeds text chunks via `SentenceTransformer("all-MiniLM-L6-v2")` to generate 384-dimensional dense vectors.
+  * Populates SQL tables in PostgreSQL using SQLAlchemy models mapping `pgvector` types.
+* **Dual-Engine Hybrid Search**:
+  * *Vector Search*: Cosine similarity computed against candidate chunks using PostgreSQL `pgvector` distance operator (`<=>`).
+  * *Keyword Search*: Custom English tokenizer (whitespace, lowercase, stop-word removal) feeding a dynamic `rank_bm25` Okapi index computed for the requested document.
+* **Weighted Linear Combination (WLC) Fusion**:
+  * Normalizes keyword scores using Min-Max scaling per query batch.
+  * Blends scores: $Score = 0.7 \cdot VectorSim + 0.3 \cdot BM25_{norm}$.
+* **Tiered Fallback State Machine**:
+  * Calculates composite confidence score: $0.6 \cdot MaxSim + 0.4 \cdot Agreement$.
+  * Executes query expansion rewriting, FlashRank reranking (`ms-marco-MiniLM-L-6-v2`), or politely formats clarification queries back to the client console to prevent model hallucinations.
+* **Monospace Trace Logging**:
+  * Builds a chronological trace containing `ReasoningStepDto` lists mapping states, confidence thresholds, and system decisions.
+
+---
+
+## 3. React Frontend Client
+
+The frontend client operates as a dense developer workspace console optimized for quick search auditing.
+
+* **Document Vault**:
+  * Allows PDF uploads and tracks processing states (`PROCESSING`, `READY`, `FAILED`) dynamically.
+* **Auditable Chat Console**:
+  * Renders markdown-based LLM answers using `react-markdown` with syntax highlighting for code blocks.
+  * *Source Citation Panels*: Interactive citation buttons displaying document title, page numbers, relevance match scores, and source text snippets.
+  * *System Thoughts Toggle*: Collapsible execution timeline visualizing the Python fallback trace (showing scoring details, query rewriting text, and reranking logs).
+  * *Dynamic Avatars*: Automatically formats two-letter initials derived directly from the registered `username`.

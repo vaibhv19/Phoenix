@@ -1,71 +1,77 @@
 # Product Requirements Document (PRD): Phoenix
 
 **Project Name:** Phoenix — Transparent RAG for Technical Documentation  
-**Status:** Planning / Architecture Phase  
-**Document Version:** 1.0  
+**Status:** Implemented & Verified (Production Ready)  
+**Document Version:** 1.1  
 
 ---
 
-## 1. Problem Statement
-Generic RAG (Retrieval-Augmented Generation) systems often fail when applied to dense technical documentation (e.g., Spring Boot, AWS Whitepapers). Two specific failure modes predominate:
-1.  **Term Sensitivity:** Pure semantic vector search often misses exact-match technical identifiers (e.g., specific configuration keys like `spring.jpa.hibernate.ddl-auto` or error codes) in favor of conceptually similar but technically incorrect passages.
-2.  **The Black Box Problem:** Users are presented with a confident answer but have no visibility into the system’s internal certainty or the "self-correction" steps taken when the initial retrieval was poor.
+## 1. Executive Summary & Problem Statement
 
-**Phoenix** addresses these gaps by implementing a **hybrid search** (Vector + Keyword/BM25) and a **transparency-first UI** that surfaces fallback reasoning and confidence scores, prioritizing technical accuracy over conversational fluency.
+Generic Retrieval-Augmented Generation (RAG) pipelines often fail when applied to dense, precise technical documentation (such as Spring Boot configurations, API references, or AWS Architecture whitepapers). Two primary failure modes exist:
+
+1. **Term Sensitivity**: Pure semantic vector search (e.g. cosine similarity on dense embeddings) frequently misses exact-match alphanumeric technical identifiers (e.g., configuration keys like `spring.jpa.hibernate.ddl-auto` or specific error codes) because the vector representation maps them to conceptually similar but technically incorrect contexts.
+2. **The Black Box Problem**: Standard RAG interfaces display a generated answer with absolute confidence, hiding the system's internal retrieval uncertainty and self-correction efforts (such as query rewriting or context reranking) from the end-user.
+
+**Phoenix** addresses these problems by implementing a high-accuracy **hybrid search** (Dense Vector + Sparse Keyword/BM25) and a **transparency-first user interface** that exposes fallback reasoning and composite confidence scores. The system prioritizes exact technical correctness over conversational extrapolation.
 
 ---
 
 ## 2. Target Persona & Use Case
-*   **Target Persona:** Technical Reviewers and Recruiters.
-*   **Core Use Case:** A user uploads a 50-page technical PDF (e.g., an AWS Architecture guide). They query the system for a specific implementation detail. Phoenix retrieves the source, calculates confidence, and—if the initial search is weak—demonstrates its ability to rewrite the query or ask a clarifying question rather than hallucinating an answer.
+
+### 2.1 Target Persona
+* **Technical Reviewers / Recruiters / Software Engineers**: Personnel seeking precise answers from codebase specifications, configuration schemas, or developer guides without wading through manuals.
+
+### 2.2 Core User Journey
+1. A user creates an account (validating Username, Email, Password) and logs in.
+2. The user creates a workspace (Project) and uploads a technical PDF (e.g. a Spring Boot reference manual).
+3. The system splits the document into overlapping chunks, generates embeddings locally via `all-MiniLM-L6-v2`, and index vectors in `pgvector` alongside a `rank_bm25` vocabulary.
+4. The user submits a specific technical query (e.g. "what is the default value of spring.datasource.url?").
+5. The system performs a hybrid query and returns the answer alongside clickable citations, a retrieval confidence metric, and a collapsible reasoning timeline displaying the fallback pipeline status.
 
 ---
 
-## 3. Functional Requirements (In-Scope)
+## 3. Functional Requirements (Implemented)
 
 ### 3.1 Python AI Engine (Core Logic)
-*   **Ingestion Pipeline:** Automated PDF parsing, recursive character chunking, and embedding generation.
-*   **Hybrid Retrieval Engine:** Implementation of a dual-search pipeline combining:
-    *   **Vector Search:** For semantic and conceptual matching.
-    *   **Keyword Search (BM25):** For exact-match technical term retrieval.
-*   **Vector Persistence:** Storage of embeddings in a vector database (Pinecone, pgvector, or FAISS).
-*   **Confidence Scoring:** Each retrieval must produce a confidence metric based on similarity thresholds and keyword overlap.
-*   **Fallback Logic Execution:** Triggering of specific strategies when confidence is low:
-    *   **Query Rewriting:** Reformulating the user's prompt and retrying the search.
-    *   **Re-ranking:** Re-evaluating the top-K retrieved chunks using a cross-encoder approach.
-    *   **Clarification Generation:** Formulating a question back to the user when retrieval remains insufficient.
+* **Ingestion Pipeline**: Automated PDF extraction and cleaning. Text splitting is handled via `RecursiveCharacterTextSplitter` (chunk size: 800 chars, overlap: 150 chars) to maintain code block and key-value structure integrity.
+* **Hybrid Retrieval**: Parallel execution of:
+  * *Vector Search*: Cosine similarity computed against 384-dimensional dense vectors generated via `all-MiniLM-L6-v2` in `pgvector`.
+  * *Keyword Search*: Exact-term frequency calculated dynamically via the BM25 Okapi algorithm.
+* **WLC Fusion**: Score combination using a Weighted Linear Combination (WLC) formula with Min-Max normalization applied to BM25 scores.
+* **Composite Confidence Scoring**: Calculates certainty based on top vector similarity (MaxSim) and Consensus Agreement (overlap between Vector top-3 and BM25 top-5).
+* **Tiered Fallback System**:
+  * *Green Path (CS >= 0.75)*: Generates the answer directly.
+  * *Yellow Path (0.50 <= CS < 0.75)*: Rewrites the user query using an LLM and retries hybrid search.
+  * *Orange Path (0.35 <= CS < 0.50)*: Gathers the top 20 fused candidates and reranks them via a `FlashRank` Cross-Encoder model.
+  * *Red Path (CS < 0.35)*: Aborts generation and outputs a structured clarification question back to the user.
 
 ### 3.2 Spring Boot API Layer (Platform Orchestration)
-*   **Security:** Implementation of stateless JWT authentication for user session management.
-*   **Document Management:** REST endpoints for uploading PDF files and managing metadata (document status, chunk references).
-*   **Metadata Persistence:** Storage of query history, document associations, and confidence logs in a relational database.
-*   **AI Service Bridge:** A structured internal API contract to communicate with the Python AI engine over REST.
+* **Security**: Stateless JWT authentication.
+  * *Registration fields*: Username, Email, Password, Confirm Password (enforces username uniqueness and password validation).
+  * *Authentication fields*: Username or Email, Password.
+* **User Identity**: The system consistently derives the user's primary identity from the registered `username` (rather than the email address) for profile displays, sidebar cards, and initials avatars.
+* **Document and Project Management**: RESTful management of projects and files. Cascades physical storage cleanup and database row deletion on project removal.
+* **Asynchronous Processing**: Background document indexing utilizing Spring's async TaskExecutor, communicating with the Python AI Engine over REST.
 
-### 3.3 React Frontend (The Interface)
-*   **Document Vault:** Interface for uploading and tracking the processing state of technical PDFs.
-*   **Transparent Chat Interface:** A conversational UI that provides:
-    *   **Source Citations:** Hyperlinked references to specific document chunks.
-    *   **Confidence Indicators:** Visual representation of retrieval strength.
-    *   **Reasoning Panel:** A dedicated "System Thought" view that explicitly shows *why* a fallback was triggered (e.g., "Confidence score 0.58 < 0.75; retrying with rewritten query").
+### 3.3 React Frontend (Client Console)
+* **Document Vault**: File uploading interface featuring processing state alerts (e.g., `PROCESSING`, `READY`, `FAILED`).
+* **Transparent Chat Interface**:
+  * *Source Citations*: Monospace blocks displaying chunk page numbers, document source, and exact matches.
+  * *Confidence Indicators*: HSL-derived color badges indicating the strength of the retrieval (Green/Yellow/Orange/Red).
+  * *Reasoning Panel*: Collapsible execution timeline visualizing each step of the fallback orchestrator (e.g., initial confidence score, query rewrite string, reranking output, or clarification triggers).
 
 ---
 
 ## 4. Explicit Non-Goals
-*   **No Infrastructure Deployment:** This project is for local/architecture demonstration; automated cloud deployment (AWS/Azure) is out of scope.
-*   **No Multi-Document Cross-Referencing:** Initial scope is limited to RAG over a single project/document context at a time.
-*   **Limited File Support:** Support is strictly for PDF files; no support for .txt, .docx, or .html.
-*   **Basic Auth Only:** No OAuth2 (Google/GitHub) or complex RBAC (Role-Based Access Control) beyond basic user identification.
+* **No Public Cloud Dependencies**: Designed strictly for local execution utilizing a local PostgreSQL instance and local LLM orchestration via Ollama to ensure complete data privacy and zero API costs.
+* **No Multi-Document Cross-Referencing**: Retrieval context is bounded by a single uploaded document per query session.
+* **File Type Limitation**: Exclusively supports PDF documents (no support for docx, txt, or raw html).
+* **No Third-Party OAuth**: Authentication is handled purely through the internal JWT provider (no Google, GitHub, or Okta integrations).
 
 ---
 
-## 5. Success Criteria
-*   **Hybrid Superiority:** In benchmarking, the system must successfully retrieve exact-match technical keys (e.g., `server.port`) that are missed by a pure vector-search baseline.
-*   **Graceful Uncertainty:** The system must trigger a "Clarification" or "Query Rewrite" fallback 100% of the time when queried about topics not present in the uploaded document, rather than hallucinating.
-*   **Auditability:** A technical reviewer must be able to follow the logic path from "User Query" to "Confidence Score" to "Fallback Strategy" via the UI.
-
----
-
-## 6. Key Risks & Open Questions
-*   **Chunk Size Optimization:** Finding the balance between code-block integrity and embedding model context limits.
-*   **Confidence Calibration:** Defining the mathematical threshold at which "Vector + BM25" is considered "low confidence."
-*   **Latency:** The overhead of running query rewriting and re-ranking may increase response times; needs monitoring.
+## 5. Success Metrics
+* **Hybrid Term-Matching Accuracy**: The system successfully retrieves alphanumeric configuration keys (e.g. `server.port`) that are completely missed by semantic-only vector searches.
+* **Hallucination Prevention**: The system must transition to the clarification fallback state 100% of the time when queried on topics not covered in the document corpus, instead of generating false facts.
+* **Explainability**: Reviewers can audit the exact path of the RAG pipeline from user input to LLM response through the UI Reasoning Trace.

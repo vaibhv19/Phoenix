@@ -1,67 +1,66 @@
-# DESIGN.md — Phoenix Visual Design System
+# Visual Design Specification: Phoenix
 
-This document defines the visual design system for **Phoenix**. Phoenix is styled not as a simple AI chatbot, but as a **technical document investigation workspace**. The user interface is designed to resemble professional, precise developer utilities (such as Linear, GitHub, Cursor, and Notion).
+This document defines the user interface layout patterns, typographic standards, and color tokens implemented in **Phoenix**. 
 
----
-
-## 1. Design Philosophy: "Precise Investigation"
-
-Phoenix rejects flashy, neon, and illustrative chatbot dashboards. The interface is optimized to evoke clarity, evidence, confidence, traceability, and developer productivity.
-
-### Core Principles:
-*   **Calm & Restrained Surface**: The interface uses a neutral color palette. Backgrounds are deep charcoal and solid zinc; borders are low-contrast lines; and margins are compact.
-*   **Density & Screen Utility**: Gaps and excessive whitespace are reduced. Screen area is maximized for document inspection, markdown answers, and technical matrices.
-*   **Evidence & Citations First**: The system emphasizes citations. Source files, page numbers, and exact code chunks are prioritized over decorative chatbot borders.
-*   **Minimal Interaction Overhead**: Animations are subtle (opacity fades or slight transitions); no bouncy, scaling, or floating effects are allowed.
+The UI is styled not as a generic chatbot, but as a **dense, technical investigation workspace** echoing developer utilities like GitHub, Cursor, and Linear.
 
 ---
 
-## 2. Design Tokens & Palette
+## 1. Core Styling Architecture & Tokens
 
 Phoenix utilizes a highly restrained color scheme. Accent colors are used strictly to communicate state rather than decoration.
 
-### Neutral Colors
-*   **App Background**: `#09090B` (Zinc 950)
-*   **Surface Panels**: `#0C0C0E` (Zinc 900 / Neutral Charcoal)
-*   **Card Surfaces**: `#161618` (Zinc 850)
-*   **Border Separators**: `#27272A` (Zinc 800)
-*   **Primary Text**: `#F4F4F5` (Zinc 100)
-*   **Secondary Text**: `#A1A1AA` (Zinc 500)
-*   **Muted Text**: `#71717A` (Zinc 400)
+### 1.1 Color Palette Mappings
+Our UI tokens map directly to Tailwind configs and the global [index.css](file:///d:/Coding/Projects----For%20Resume/Phoenix/frontend/src/index.css) declarations:
 
-### State Accent Colors
-*   **Active States**: `#3B82F6` (Blue 500) — Used for highlighting current project tabs, selection circles, or active navigation items.
-*   **Verified Source / Green**: `#10B981` (Emerald 500) — Used for confidence scores $\ge 0.75$ and success statuses.
-*   **Self-Corrected / Yellow**: `#F59E0B` (Amber 500) — Used for confidence scores $0.50 \le CS < 0.75$ and processing statuses.
-*   **Reranked / Orange**: `#F97316` (Orange 500) — Used for confidence scores $0.35 \le CS < 0.50$.
-*   **Clarified / Red**: `#EF4444` (Red 500) — Used for confidence scores $< 0.35$ and failed operations.
+* **App Background**: `#09090B` (Zinc 950) — Set as the default HTML body background.
+* **Muted Surface Panel (`.glass-panel`)**: `#0C0C0E` (Zinc 900) — Used for layout dividers, sidebars, and control headers.
+* **Component Card Surface (`.glass-card`)**: `#161618` (Zinc 850) — Used for message bubbles, document cards, and input zones.
+* **Low-Contrast Borders**: `#27272A` (Zinc 800) — Used for structural borders.
+* **Primary Text**: `#F4F4F5` (Zinc 100) — Default readability text.
+* **Secondary Muted Text**: `#94A3B8` (`brand.textMuted` / Zinc 400) — Used for metadata descriptions.
 
-### Typography
-*   **UI / Body Font**: `Inter`, `-apple-system`, `BlinkMacSystemFont`, `Segoe UI`, `system-ui`, sans-serif (clean, sans-serif readability, reduced font weight variation).
-*   **Technical / Code Font**: `JetBrains Mono`, `IBM Plex Mono`, monospace (used for config keys, code snippets, relevance ratios, and logs).
+### 1.2 State Accent Colors
+Accents correspond to query confidence tiers:
+* **Active Accent / Selection**: `#3B82F6` (Blue 500) — Active tabs, buttons.
+* **High Confidence / Success State**: `#10B981` (Emerald 500) — Confidence score $\ge 0.75$.
+* **Marginal Confidence / Processing State**: `#F59E0B` (Amber 500) — Confidence score $0.50 \le CS < 0.75$.
+* **Low Confidence / Reranked State**: `#F97316` (Orange 500) — Confidence score $0.35 \le CS < 0.50$.
+* **Aborted Retrieval / Error State**: `#EF4444` (Red 500) — Confidence score $< 0.35$ or processing error.
 
 ---
 
-## 3. UI Workspaces & Screens
+## 2. Typography & Fonts
 
-### 3.1 Workspace Sidebar
-*   The sidebar acts as a technical navigator, not a dashboard menu.
-*   Uses a dark background (`#09090B`), solid borders, and tight item spacing.
-*   Active navigation items are styled with subtle background highlights and border accents (no heavy gradients).
+* **Primary Body Interface**: `Inter` (sans-serif) — Clean, highly legible proportional font optimized for small text sizes.
+* **Technical Output**: `JetBrains Mono` / `IBM Plex Mono` (monospace) — Used for citations, relevance scores, parameters, and logs to emphasize technical precision.
 
-### 3.2 Chat Workspace & Empty State
-*   **Initial Landing State**: Before querying, the console displays a **project-focused diagnostic summary** instead of generic welcome screens:
-    - Lists active project metadata (document count, chunk count, index health status).
-    - Lists current documents loaded in the project.
-    - Offers suggested technical questions based directly on the loaded documents.
-*   **The Right Panel (Diagnostic Context)**:
-    - *Before Queries*: Displays diagnostic metrics of the active project (indexing timestamps, DB status, system model settings).
-    - *During Queries*: Scrolls source citations, page matches, and confidence metrics cleanly.
+---
 
-### 3.3 Reasoning Trace & Timelines
-*   Surfaced as a collapsable timeline that mimics a build/execution console log.
-*   Uses monospace text, simple vertical lines, and small step numbers.
+## 3. UI Views & Interface Layout
 
-### 3.4 Citation Matrix
-*   Displays matching code blocks inside monospace code views with relevance score percentages (e.g. `98%`).
-*   Borders highlight on matrix selection to ensure seamless traceability.
+### 3.1 Workspace Sidebar & Identity Card
+* Spaced with a dense grid to maximize screen real estate.
+* Displays projects, document status notifications, and the user profile card.
+* **Username Avatars**: Rather than displaying full email strings, the sidebar utilizes a user card showing the registered `username` (e.g. `vaibhav`). The user profile avatar displays a two-character initials block parsed dynamically from the `username` (e.g. `"vaibhav"` -> `VA`, `"john_doe"` -> `JD`).
+
+### 3.2 Split-Screen Console Workspace
+The chat workspace splits into two interactive columns:
+1. **Left Panel: Conversational Console**:
+   * *Landing State*: Renders active project metadata (document count, chunk size, indexes) and sample queries instead of generic welcoming copy.
+   * *Chat Flow*: Renders messages inside zinc cards, featuring collapsible system thought logs.
+2. **Right Panel: Citation & Diagnostic Matrix**:
+   * Displays the detailed citation matrix. When a user clicks a citation in the chat panel, the corresponding source text chunk flashes using the `.animate-pulse-highlight` utility to ensure complete visibility.
+
+### 3.3 Collapsible Console Trace Timeline
+* Mimics an IDE build trace log.
+* Rendered inside a monospace panel, utilizing simple vertical connection lines and small color-coded step status indicator circles.
+
+---
+
+## 4. UI Transition Animations
+
+Phoenix bans bouncing, scaling, or floating animation effects, sticking strictly to subtle, high-performance transitions:
+* **`.animate-fade-in`**: Subtle scale (`98%` to `100%`) and opacity fade for landing tabs and panels.
+* **`.animate-slide-in`**: Slight upward slide (`0.5rem` to `0`) and opacity fade for chat bubbles.
+* **`.animate-pulse-highlight`**: Flashes the matching citation card border and background to draw attention to the source text.
