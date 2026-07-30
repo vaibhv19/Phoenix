@@ -105,7 +105,7 @@ stateDiagram-v2
 ### 4.1 Spring Boot Outbound Socket Timeout
 * **Symptom**: Frontend queries fail with an HTTP 500 error, and Spring Boot logs show: `java.net.SocketTimeoutException: Read timed out`.
 * **Cause**: Ollama is loading model weights (cold start) or processing a long reasoning trace, exceeding the default 60-second read timeout.
-* **Resolution**: Ensure [RestClientConfig.java](file:///d:/Coding/Projects----For%20Resume/Phoenix/backend/src/main/java/com/resume/phoenix/document/config/RestClientConfig.java#L19) and [llm.py](file:///d:/Coding/Projects----For%20Resume/Phoenix/ai-engine/app/services/llm.py#L76) are configured with a `300` second (5 minute) read timeout.
+* **Resolution**: Ensure [RestClientConfig.java](../backend/src/main/java/com/resume/phoenix/document/config/RestClientConfig.java#L19) and [llm.py](../ai-engine/app/services/llm.py#L76) are configured with a `300` second (5 minute) read timeout.
 
 ### 4.2 Database Connection Pool Exhaustion
 * **Symptom**: Spring Boot freezes during bulk document uploads, throwing `HikariPool-1 - Connection is not available`.
@@ -115,7 +115,7 @@ stateDiagram-v2
 ### 4.3 Reranker Cache Mismatch
 * **Symptom**: Orange Path queries fail on first execution.
 * **Cause**: FlashRank is downloading ONNX models in the background, causing a timeout.
-* **Resolution**: Let the download finish. If execution continues to fail, verify that [reranking.py](file:///d:/Coding/Projects----For%20Resume/Phoenix/ai-engine/app/services/reranking.py#L68) falls back to mock ranking mode when ONNX models fail to load.
+* **Resolution**: Let the download finish. If execution continues to fail, verify that [reranking.py](../ai-engine/app/services/reranking.py#L68) falls back to mock ranking mode when ONNX models fail to load.
 
 ---
 

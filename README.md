@@ -105,18 +105,18 @@ All core architecture, database schemas, and engineering specifications are kept
 
 | Document Category | Target Specification | Reference File Link |
 |---|---|---|
-| **Product Planning** | Core requirements, target personas, and scope bounds. | [PRD.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/PRD.md) |
-| **System Features** | Functional API, AI, and client specifications. | [Feature_List.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Feature_List.md) |
-| **Infrastructure Stack** | Software dependencies and versions matrix. | [Tech%20Stack.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Tech%20Stack.md) |
-| **Execution Flow** | Sequence lifecycles and fallback diagrams. | [AppFlow.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/AppFlow.md) |
-| **Visual Design** | Color tokens, panel layouts, and CSS classes. | [Design.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Design.md) |
-| **Core RAG Logic** | Mathematical fusions and state orchestrations. | [RAG_Architecture.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/RAG_Architecture.md) |
-| **API Contract** | Gateway REST specifications and payload DTO shapes. | [API_Specification.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/API_Specification.md) |
-| **Data Schema** | Shared PostgreSQL and pgvector ERD models. | [DB_Schema.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/DB_Schema.md) |
-| **Security Framework** | Cryptography, filters, and attack mitigations. | [Security.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Security.md) |
-| **Dependency Strategy**| Ollama, embeddings, and database providers configurations. | [Provider_Strategy.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Provider_Strategy.md) |
-| **Future Streaming** | Planned STOMP WebSocket interface specifications. | [WebSocket_Architecture.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/WebSocket_Architecture.md) |
-| **Exceptions & Resiliency**| Global handlers, timeouts, and JSON error structures. | [Error_Handling.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Error_Handling.md) |
-| **Testing Strategy** | Integration validation and hit-rate benchmarking. | [Testing_Strategy.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Testing_Strategy.md) |
-| **Knowledge Wiki** | Consolidated design decisions and guides. | [Engineering_Knowledge_Base.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Engineering_Knowledge_Base.md) |
-| **Release Management** | Release notes, milestones, and system limitations. | [Release_Notes.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Release_Notes.md) |
+| **Product Planning** | Core requirements, target personas, and scope bounds. | [PRD.md](Docs/PRD.md) |
+| **System Features** | Functional API, AI, and client specifications. | [Feature_List.md](Docs/Feature_List.md) |
+| **Infrastructure Stack** | Software dependencies and versions matrix. | [Tech%20Stack.md](Docs/Tech Stack.md) |
+| **Execution Flow** | Sequence lifecycles and fallback diagrams. | [AppFlow.md](Docs/AppFlow.md) |
+| **Visual Design** | Color tokens, panel layouts, and CSS classes. | [Design.md](Docs/Design.md) |
+| **Core RAG Logic** | Mathematical fusions and state orchestrations. | [RAG_Architecture.md](Docs/RAG_Architecture.md) |
+| **API Contract** | Gateway REST specifications and payload DTO shapes. | [API_Specification.md](Docs/API_Specification.md) |
+| **Data Schema** | Shared PostgreSQL and pgvector ERD models. | [DB_Schema.md](Docs/DB_Schema.md) |
+| **Security Framework** | Cryptography, filters, and attack mitigations. | [Security.md](Docs/Security.md) |
+| **Dependency Strategy**| Ollama, embeddings, and database providers configurations. | [Provider_Strategy.md](Docs/Provider_Strategy.md) |
+| **Future Streaming** | Planned STOMP WebSocket interface specifications. | [WebSocket_Architecture.md](Docs/WebSocket_Architecture.md) |
+| **Exceptions & Resiliency**| Global handlers, timeouts, and JSON error structures. | [Error_Handling.md](Docs/Error_Handling.md) |
+| **Testing Strategy** | Integration validation and hit-rate benchmarking. | [Testing_Strategy.md](Docs/Testing_Strategy.md) |
+| **Knowledge Wiki** | Consolidated design decisions and guides. | [Engineering_Knowledge_Base.md](Docs/Engineering_Knowledge_Base.md) |
+| **Release Management** | Release notes, milestones, and system limitations. | [Release_Notes.md](Docs/Release_Notes.md) |

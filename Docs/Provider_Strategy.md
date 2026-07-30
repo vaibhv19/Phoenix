@@ -37,15 +37,15 @@ graph TD
 * **Model Choice**: `mistral` (7 Billion parameter model).
 * **Rationale**: Offers high performance for technical reasoning and code analysis while fitting comfortably within the memory footprint of consumer hardware.
 * **Timeout Mitigation**: A local LLM can take time to start and compile weights on first-run. To prevent request failures, the HTTP read timeout has been set to **5 minutes (300 seconds)** in:
-  * Spring Boot outbound client: [RestClientConfig.java](file:///d:/Coding/Projects----For%20Resume/Phoenix/backend/src/main/java/com/resume/phoenix/document/config/RestClientConfig.java#L19)
-  * FastAPI Ollama HTTPX client: [llm.py](file:///d:/Coding/Projects----For%20Resume/Phoenix/ai-engine/app/services/llm.py#L76)
+  * Spring Boot outbound client: [RestClientConfig.java](../backend/src/main/java/com/resume/phoenix/document/config/RestClientConfig.java#L19)
+  * FastAPI Ollama HTTPX client: [llm.py](../ai-engine/app/services/llm.py#L76)
 
 ### 2.2 Text Embedding: Sentence-Transformers (`all-MiniLM-L6-v2`)
 * **Rationale**: Maps text to 384-dimensional space in a fraction of a second on standard CPUs, eliminating external token billing.
 
 ### 2.3 Reranking: FlashRank (`ms-marco-MiniLM-L-6-v2`)
 * **Rationale**: Heavy BERT/Cross-Encoder models require GPU acceleration. FlashRank is optimized for lightweight CPU inference, making it perfect for our local Orange Path reranking step.
-* **In-Memory Fallback**: If FlashRank encounters a runtime import or initialization failure, the system falls back to a deterministic **Mock Reranker** in [reranking.py](file:///d:/Coding/Projects----For%20Resume/Phoenix/ai-engine/app/services/reranking.py#L33) rather than crashing, scoring candidates down from `0.85`.
+* **In-Memory Fallback**: If FlashRank encounters a runtime import or initialization failure, the system falls back to a deterministic **Mock Reranker** in [reranking.py](../ai-engine/app/services/reranking.py#L33) rather than crashing, scoring candidates down from `0.85`.
 
 ### 2.4 Vector Search: PostgreSQL with `pgvector`
 * **Rationale**: Relational attributes (user credentials, projects, audit records) and vectors are kept in a single database.

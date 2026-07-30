@@ -8,17 +8,17 @@ This document defines the mathematical models, embedding vectors, schema structu
 
 Technical documentation contains dense segments (Java code, YAML blocks) that must be kept intact during ingestion.
 
-* **Splitter**: `RecursiveCharacterTextSplitter` in [ingestion.py](file:///d:/Coding/Projects----For%20Resume/Phoenix/ai-engine/app/services/ingestion.py)
+* **Splitter**: `RecursiveCharacterTextSplitter` in [ingestion.py](../ai-engine/app/services/ingestion.py)
 * **Configuration Parameters**:
   * **Chunk Size**: `800` characters.
   * **Chunk Overlap**: `150` characters.
   * **Separators**: `["\n\n", "\n", " ", ""]`.
 * **Design Rationale**: A 800-character boundary preserves complete configuration property blocks and small Java methods. The 150-character overlap carries trailing property descriptions or method declarations into the adjacent chunk context.
-* **Embedding Model**: `SentenceTransformer("all-MiniLM-L6-v2")` in [vector_store.py](file:///d:/Coding/Projects----For%20Resume/Phoenix/ai-engine/app/services/vector_store.py). Converts text segments into 384-dimensional dense vectors.
-* **Vector Database**: Mapped via `pgvector` in PostgreSQL. Mapped via SQLAlchemy ORM model `DocumentChunk` containing the `VECTOR(384)` column [models.py](file:///d:/Coding/Projects----For%20Resume/Phoenix/ai-engine/app/models.py).
+* **Embedding Model**: `SentenceTransformer("all-MiniLM-L6-v2")` in [vector_store.py](../ai-engine/app/services/vector_store.py). Converts text segments into 384-dimensional dense vectors.
+* **Vector Database**: Mapped via `pgvector` in PostgreSQL. Mapped via SQLAlchemy ORM model `DocumentChunk` containing the `VECTOR(384)` column [models.py](../ai-engine/app/models.py).
 * **Similarity Metric**: Cosine similarity is calculated as:
   $$CosineSimilarity = 1.0 - CosineDistance$$
-  Implemented via SQLAlchemy operator: `(1.0 - cast(DocumentChunk.embedding.op('<=>')(query_embedding), Float))` in [search_vector.py](file:///d:/Coding/Projects----For%20Resume/Phoenix/ai-engine/app/services/search_vector.py).
+  Implemented via SQLAlchemy operator: `(1.0 - cast(DocumentChunk.embedding.op('<=>')(query_embedding), Float))` in [search_vector.py](../ai-engine/app/services/search_vector.py).
 
 ---
 
@@ -26,11 +26,11 @@ Technical documentation contains dense segments (Java code, YAML blocks) that mu
 
 Vector similarity is highly effective for conceptual queries but fails for exact technical keys. By running vector search and BM25 search in parallel, we ensure both signals are captured.
 
-* **Keyword Engine**: `rank_bm25` in [search_keyword.py](file:///d:/Coding/Projects----For%20Resume/Phoenix/ai-engine/app/services/search_keyword.py), tokenizing with stop-word filters. The BM25 Okapi model is instantiated dynamically over the document's chunks to optimize search speed for single-document queries.
-* **Min-Max Scaling**: Raw BM25 scores $[0, \infty)$ are normalized per batch using `MinMaxScaler` in [fusion.py](file:///d:/Coding/Projects----For%20Resume/Phoenix/ai-engine/app/services/fusion.py) to map them to the $[0, 1]$ range:
+* **Keyword Engine**: `rank_bm25` in [search_keyword.py](../ai-engine/app/services/search_keyword.py), tokenizing with stop-word filters. The BM25 Okapi model is instantiated dynamically over the document's chunks to optimize search speed for single-document queries.
+* **Min-Max Scaling**: Raw BM25 scores $[0, \infty)$ are normalized per batch using `MinMaxScaler` in [fusion.py](../ai-engine/app/services/fusion.py) to map them to the $[0, 1]$ range:
   $$Score_{bm25\_norm} = \frac{Score - Score_{min}}{(Score_{max} - Score_{min}) + \epsilon}$$
   where $\epsilon = 10^{-6}$ prevents division-by-zero.
-* **Score Fusion**: Computed using a Weighted Linear Combination (WLC) in [fusion.py](file:///d:/Coding/Projects----For%20Resume/Phoenix/ai-engine/app/services/fusion.py):
+* **Score Fusion**: Computed using a Weighted Linear Combination (WLC) in [fusion.py](../ai-engine/app/services/fusion.py):
   $$Score_{final} = \alpha \cdot Similarity_{vector} + (1 - \alpha) \cdot Score_{bm25\_norm}$$
   with the tuning parameter $\alpha$ set to `0.7` by default.
 
@@ -38,7 +38,7 @@ Vector similarity is highly effective for conceptual queries but fails for exact
 
 ## 3. Composite Confidence Scoring Model
 
-Confidence measures the consensus between the dense and sparse search indices. Computed in [confidence.py](file:///d:/Coding/Projects----For%20Resume/Phoenix/ai-engine/app/services/confidence.py):
+Confidence measures the consensus between the dense and sparse search indices. Computed in [confidence.py](../ai-engine/app/services/confidence.py):
 
 $$CS = 0.6 \cdot MaxSim + 0.4 \cdot Agreement$$
 
@@ -51,7 +51,7 @@ $$CS = 0.6 \cdot MaxSim + 0.4 \cdot Agreement$$
 
 ## 4. Fallback Decision Engine (State Machine)
 
-The `FallbackOrchestrator` in [fallback.py](file:///d:/Coding/Projects----For%20Resume/Phoenix/ai-engine/app/services/fallback.py) coordinates query execution using the composite score ($CS$):
+The `FallbackOrchestrator` in [fallback.py](../ai-engine/app/services/fallback.py) coordinates query execution using the composite score ($CS$):
 
 | Confidence Score ($CS$) | Pipeline State | Orchestrated Action |
 | :--- | :--- | :--- |

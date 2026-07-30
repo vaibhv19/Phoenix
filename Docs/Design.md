@@ -11,7 +11,7 @@ The UI is styled not as a generic chatbot, but as a **dense, technical investiga
 Phoenix utilizes a highly restrained color scheme. Accent colors are used strictly to communicate state rather than decoration.
 
 ### 1.1 Color Palette Mappings
-Our UI tokens map directly to Tailwind configs and the global [index.css](file:///d:/Coding/Projects----For%20Resume/Phoenix/frontend/src/index.css) declarations:
+Our UI tokens map directly to Tailwind configs and the global [index.css](../frontend/src/index.css) declarations:
 
 * **App Background**: `#09090B` (Zinc 950) — Set as the default HTML body background.
 * **Muted Surface Panel (`.glass-panel`)**: `#0C0C0E` (Zinc 900) — Used for layout dividers, sidebars, and control headers.

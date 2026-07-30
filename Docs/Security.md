@@ -45,7 +45,7 @@ sequenceDiagram
 
 ## 2. API Authorization & Access Rules
 
-All requests pass through the Spring Security Filter Chain configured in [SecurityConfig.java](file:///d:/Coding/Projects----For%20Resume/Phoenix/backend/src/main/java/com/resume/phoenix/auth/config/SecurityConfig.java):
+All requests pass through the Spring Security Filter Chain configured in [SecurityConfig.java](../backend/src/main/java/com/resume/phoenix/auth/config/SecurityConfig.java):
 
 ```java
 http

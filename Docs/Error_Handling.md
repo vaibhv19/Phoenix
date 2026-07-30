@@ -41,7 +41,7 @@ graph TD
 
 ## 2. Java Gateway Translation (Spring Boot)
 
-All system-level exceptions are caught and sanitized by the Spring `@RestControllerAdvice` class [GlobalExceptionHandler.java](file:///d:/Coding/Projects----For%20Resume/Phoenix/backend/src/main/java/com/resume/phoenix/exception/GlobalExceptionHandler.java).
+All system-level exceptions are caught and sanitized by the Spring `@RestControllerAdvice` class [GlobalExceptionHandler.java](../backend/src/main/java/com/resume/phoenix/exception/GlobalExceptionHandler.java).
 
 ### 2.1 Validation Error Responses
 When REST request parameters fail constraints, the handler returns a detailed validation map:
@@ -71,7 +71,7 @@ When a requested workspace or document ID does not exist:
 
 ### 3.2 Python In-Memory Fallbacks
 In the FastAPI AI Engine, internal retrieval operations feature programmatic fallbacks to prevent crashes:
-* **FlashRank Fallback**: If the `flashrank` ranker initialization fails, the service falls back to a **Mock Reranker** in [reranking.py](file:///d:/Coding/Projects----For%20Resume/Phoenix/ai-engine/app/services/reranking.py#L68) which simulated scores rather than crashing.
+* **FlashRank Fallback**: If the `flashrank` ranker initialization fails, the service falls back to a **Mock Reranker** in [reranking.py](../ai-engine/app/services/reranking.py#L68) which simulated scores rather than crashing.
 
 ---
 

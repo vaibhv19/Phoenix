@@ -70,17 +70,17 @@ The roadmap is structured into 11 sequential phases. Each phase is documented in
 
 | Phase | Relative Link | Summary | Estimated Complexity |
 | :--- | :--- | :--- | :--- |
-| **Phase 1** | [Phase_01_Project_Setup.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Roadmap/Phase_01_Project_Setup.md) | Initialize project repositories, build skeletons, configurations, and Docker database infrastructure. | Low |
-| **Phase 2** | [Phase_02_Authentication.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Roadmap/Phase_02_Authentication.md) | Implement JWT authentication, Spring Security filters, and session management. | Medium |
-| **Phase 3** | [Phase_03_Projects.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Roadmap/Phase_03_Projects.md) | Create user-tenant Project bounds and manage logical metadata isolation. | Low |
-| **Phase 4** | [Phase_04_Document_Upload.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Roadmap/Phase_04_Document_Upload.md) | Handle physical file uploads, Spring storage abstraction, and handoff to the AI Engine. | Medium |
-| **Phase 5** | [Phase_05_Python_AI_Engine.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Roadmap/Phase_05_Python_AI_Engine.md) | Setup FastAPI, configure `RecursiveCharacterTextSplitter` and `pgvector` store. | Medium |
-| **Phase 6** | [Phase_06_Hybrid_Retrieval.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Roadmap/Phase_06_Hybrid_Retrieval.md) | Build WLC fusion (`Sim_vector` + normalized BM25 with `MinMaxScaler`). | High |
-| **Phase 7** | [Phase_07_Confidence_Scoring.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Roadmap/Phase_07_Confidence_Scoring.md) | Code the Composite Confidence Score ($CS$) using MaxSim and Agreement. | Medium |
-| **Phase 8** | [Phase_08_Fallback_Strategies.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Roadmap/Phase_08_Fallback_Strategies.md) | Build the 4-tier state machine (Rewrite -> Re-rank via FlashRank -> Clarify). | High |
-| **Phase 9** | [Phase_09_React_Frontend.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Roadmap/Phase_09_React_Frontend.md) | Develop the Vault, Chat interface, vertical timeline, and Citation Matrix. | High |
-| **Phase 10** | [Phase_10_Testing.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Roadmap/Phase_10_Testing.md) | Execute end-to-end integration flows, including Property Key Sensitivity Tests. | Medium |
-| **Phase 11** | [Phase_11_Documentation.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Roadmap/Phase_11_Documentation.md) | Compile developer study notes, setup documentation audits, and finalize READMEs. | Low |
+| **Phase 1** | [Phase_01_Project_Setup.md](Phase_01_Project_Setup.md) | Initialize project repositories, build skeletons, configurations, and Docker database infrastructure. | Low |
+| **Phase 2** | [Phase_02_Authentication.md](Phase_02_Authentication.md) | Implement JWT authentication, Spring Security filters, and session management. | Medium |
+| **Phase 3** | [Phase_03_Projects.md](Phase_03_Projects.md) | Create user-tenant Project bounds and manage logical metadata isolation. | Low |
+| **Phase 4** | [Phase_04_Document_Upload.md](Phase_04_Document_Upload.md) | Handle physical file uploads, Spring storage abstraction, and handoff to the AI Engine. | Medium |
+| **Phase 5** | [Phase_05_Python_AI_Engine.md](Phase_05_Python_AI_Engine.md) | Setup FastAPI, configure `RecursiveCharacterTextSplitter` and `pgvector` store. | Medium |
+| **Phase 6** | [Phase_06_Hybrid_Retrieval.md](Phase_06_Hybrid_Retrieval.md) | Build WLC fusion (`Sim_vector` + normalized BM25 with `MinMaxScaler`). | High |
+| **Phase 7** | [Phase_07_Confidence_Scoring.md](Phase_07_Confidence_Scoring.md) | Code the Composite Confidence Score ($CS$) using MaxSim and Agreement. | Medium |
+| **Phase 8** | [Phase_08_Fallback_Strategies.md](Phase_08_Fallback_Strategies.md) | Build the 4-tier state machine (Rewrite -> Re-rank via FlashRank -> Clarify). | High |
+| **Phase 9** | [Phase_09_React_Frontend.md](Phase_09_React_Frontend.md) | Develop the Vault, Chat interface, vertical timeline, and Citation Matrix. | High |
+| **Phase 10** | [Phase_10_Testing.md](Phase_10_Testing.md) | Execute end-to-end integration flows, including Property Key Sensitivity Tests. | Medium |
+| **Phase 11** | [Phase_11_Documentation.md](Phase_11_Documentation.md) | Compile developer study notes, setup documentation audits, and finalize READMEs. | Low |
 
 ---
 

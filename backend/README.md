@@ -68,4 +68,4 @@ UPLOAD_DIR=storage
 
 ## 5. Troubleshooting & Read Timeouts
 
-* **Socket Timeout Exception**: If queries fail with a read timeout, ensure the outbound client config has `setReadTimeout(300000)` configured in [RestClientConfig.java](file:///d:/Coding/Projects----For%20Resume/Phoenix/backend/src/main/java/com/resume/phoenix/document/config/RestClientConfig.java#L19) to handle local Ollama first-run weights loading.
+* **Socket Timeout Exception**: If queries fail with a read timeout, ensure the outbound client config has `setReadTimeout(300000)` configured in [RestClientConfig.java](src/main/java/com/resume/phoenix/document/config/RestClientConfig.java#L19) to handle local Ollama first-run weights loading.
