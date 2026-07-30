@@ -72,8 +72,8 @@ class LLMService:
                 ],
                 "stream": False
             }
-            # Set a 60-second timeout
-            response = httpx.post(f"{self.url}/api/chat", json=payload, timeout=60.0)
+            # Set a 300-second timeout to allow local model cold-starts
+            response = httpx.post(f"{self.url}/api/chat", json=payload, timeout=300.0)
             if response.status_code == 200:
                 data = response.json()
                 return data["message"]["content"].strip()

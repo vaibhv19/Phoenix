@@ -16,7 +16,7 @@ public class RestClientConfig {
     public RestClient.Builder restClientBuilder() {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(5000);
-        requestFactory.setReadTimeout(60000);
+        requestFactory.setReadTimeout(300000); // 5 minutes to support slow/cold-start model inference
 
         return RestClient.builder()
                 .baseUrl(pythonAiEngineUrl)
