@@ -1,89 +1,71 @@
-# Spring Boot Backend Service
+# Spring Boot Backend Gateway Service
 
-This module handles the core administrative, security, and storage capabilities of the Phoenix platform. It exposes REST API gateways for authentication, project namespaces, and file storage parsing.
-
----
-
-## Architecture & Design Patterns
-
-The service is built on **Spring Boot 3.3.x** and adheres to a clean layered Controller-Service-Repository architecture:
-
-1. **Security Layer**: Custom filters validate incoming JWT tokens and inject user authentication details into the SecurityContext.
-2. **Project Namespace (Multi-Tenancy)**: High-security row-level boundaries protect tenant data. User A cannot view, edit, delete, or upload documents to Project B (owned by User B).
-3. **Storage Engine**: Manages local filesystem storage with path traversal guards (`../` prevention) and file extension verification (PDF only).
-4. **FastAPI Client**: Async RestClient handles file ingestion triggers and fetches document status logs from the Python service.
+This module coordinates user authentication, project multi-tenancy contexts, document file retention, and schedules async handoffs to the FastAPI AI Engine.
 
 ---
 
-## Directory Layout
+## 1. Key Responsibilities & Design Patterns
+
+The service is built on **Spring Boot 3.3.1** and Java 21, structured using a Controller-Service-Repository pattern:
+1. **Security Filters**: `JwtAuthenticationFilter` intercepts HTTP requests, extracts the JWT, verifies the HMAC-SHA256 signature, and maps the user principal to the security context.
+2. **Username-First Identity**: The user profile display names and avatars derive initials exclusively from the registered unique `username` (rather than the email address).
+3. **Workspace Isolation**: Projects act as namespaces. Logical row-level checks ensure users cannot upload files, query chat, or fetch documents belonging to another user.
+4. **Cascaded Cleanup Transactions**: Deleting a project triggers a cascading database delete of all associated records, simultaneously removing raw PDF binary files from local storage and triggering a vector cleanup in the AI Engine.
+
+---
+
+## 2. Directory Layout
 
 ```text
 backend/src/main/java/com/resume/phoenix/
-├── auth/                 # Spring Security, JWT filters, Auth controller/services
-├── project/              # Project namespaces CRUD, Services, JPA Repositories
-│   ├── controller/
-│   ├── service/
-│   ├── entity/
-│   └── repository/
-├── document/             # Document storage and status REST routes
-│   ├── controller/
-│   ├── service/
-│   └── client/           # FastAPI rest-client and request DTOs
-└── exception/            # Global exception handlers and error mapping
+├── auth/                 # Spring Security, JWT filters, Auth controller & UserDetails
+├── project/              # Project namespaces CRUD controllers & repositories
+├── document/             # Document metadata & REST controllers
+│   └── client/           # FastAPI rest-client communicating with AI Engine
+└── exception/            # Global exception handlers and error JSON translators
 ```
 
 ---
 
-## Startup & Configuration
+## 3. Environment Configuration
 
-### Prerequisites
-- Java JDK 21
-- Active PostgreSQL Database with `pgvector` extension (running on port `5432`)
+The service loads the following properties from `backend/.env` during boot:
 
-### 1. Configuration
-Review configurations inside `backend/src/main/resources/application.properties`:
-```properties
-# Database connection
-spring.datasource.url=jdbc:postgresql://localhost:5432/phoenix
-spring.datasource.username=postgres
-spring.datasource.password=postgres
-
-# AI Engine FastAPI connection URL
-ai.engine.url=http://localhost:8000
-```
-
-### 2. Launching Application
-Build compile packages and start the application:
 ```bash
-mvn clean install
-mvn spring-boot:run
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/phoenix
+SPRING_DATASOURCE_USERNAME=postgres
+SPRING_DATASOURCE_PASSWORD=postgres
+JWT_SECRET_KEY=dGhlLXBob2VuaXgtcmFnLWh5YnJpZC1yZXRyaWV2YWwtc3lzdGVtLXNlY3VyZS1rZXktMjAyNg==
+PYTHON_AI_ENGINE_URL=http://localhost:8000
+CORS_ALLOWED_ORIGINS=http://localhost:5173
+UPLOAD_DIR=storage
 ```
-Flyway migrations will run automatically on startup to apply tables (`users`, `projects`, `documents`, `document_chunks`).
 
 ---
 
-## API Documentation
+## 4. API Endpoints Reference
 
-### Auth Gateway
-- `POST /api/auth/register` - Create a user account.
-- `POST /api/auth/login` - Authenticate credentials and receive Bearer token.
+### 4.1 Authentication Gateway (`/api/auth`)
+* `POST /api/auth/register`: Request body: `{ "username", "email", "password", "confirmPassword", "fullName" }`. Registers user and returns token.
+* `POST /api/auth/login`: Request body: `{ "username", "password" }`. Returns JWT token.
 
-### Projects
-- `GET /api/projects` - List all projects owned by authenticated user.
-- `POST /api/projects` - Create a project workspace.
-- `DELETE /api/projects/{projectId}` - Delete project (cascades chunk deletes).
+### 4.2 Project Management (`/api/projects`)
+* `GET /api/projects`: List active workspaces for user principal.
+* `POST /api/projects`: Request body: `{ "name" }`. Creates a workspace.
+* `DELETE /api/projects/{id}`: Cascades database and filesystem cleanup.
 
-### Documents
-- `GET /api/projects/{projectId}/documents` - List files in the project vault.
-- `POST /api/projects/{projectId}/upload` - Upload PDF manual for ingestion.
+### 4.3 Document Management (`/api/documents`)
+* `GET /api/documents?projectId={projectId}`: List files inside the project vault.
+* `POST /api/documents/upload`: Params: `file` (MultipartFile) and `projectId` (UUID). Uploads PDF.
+* `GET /api/documents/{id}/status`: Polling endpoint for ingestion state.
+* `DELETE /api/documents/{id}`: Delete a single document and remove its file.
+
+### 4.4 Chat Console (`/api/chat`)
+* `POST /api/chat/query`: Request body: `{ "documentId", "query" }`. Executes RAG pipeline and returns answer, confidence, trace, and citations.
+* `GET /api/chat/history?projectId={projectId}`: Fetches past queries and responses for the project.
 
 ---
 
-## Testing & Verifications
+## 5. Troubleshooting & Read Timeouts
 
-Run the backend integration and security test suite using:
-```bash
-mvn test
-```
-- **`SecurityBoundaryTest`**: Asserts user access rules and tenant validation logic.
-- **`UploadValidationTest`**: Verifies path traversal protections and size constraints on multi-part uploads.
+* **Socket Timeout Exception**: If queries fail with a read timeout, ensure the outbound client config has `setReadTimeout(300000)` configured in [RestClientConfig.java](file:///d:/Coding/Projects----For%20Resume/Phoenix/backend/src/main/java/com/resume/phoenix/document/config/RestClientConfig.java#L19) to handle local Ollama first-run weights loading.

@@ -1,52 +1,52 @@
-# Python AI Engine Service
+# FastAPI AI & Retrieval Engine
 
-This module coordinates the RAG ingestion pipeline, pgvector + BM25 hybrid searches, confidence scoring, query rewriting, reranking, and fallback state orchestration.
-
----
-
-## Technical Overview
-
-The engine is built on **FastAPI** and integrates:
-1. **dense Semantic Embeddings**: Utilizes the local `all-MiniLM-L6-v2` transformer model (384 dimensions) to map chunk embeddings.
-2. **sparse Keyword Indices**: Employs `rank_bm25` in memory on-the-fly, scoped strictly to the current document ID.
-3. **WLC MinMaxScaler Fusion**: Normalizes BM25 scores and vector cosine similarities, combining them using a Weighted Linear Combination (WLC) formula ($\alpha=0.7$).
-4. **Confidence Matrix Evaluation**: Computes semantic consensus (MaxSim and agreement metrics) over top-retrieved documents.
-5. **Fallback Orchestrator State Machine**: Evaluates confidence and reranker scores, executing query rewrites (Yellow), FlashRank reranking (Orange), or clarifying prompts (Red) when needed.
+This module drives the heavy natural language processing (NLP) pipelines, dense vector encodings, sparse keyword scoring, re-ranking computations, and local LLM state orchestrations for Phoenix.
 
 ---
 
-## Directory Layout
+## 1. Core Responsibilities & Retrieval Architecture
+
+The FastAPI engine hosts the RAG pipeline components:
+1. **Document Ingest & Parser**: Extracts layout text coordinates from uploaded PDFs via `pypdf`, split-chunks character sequences via `RecursiveCharacterTextSplitter` (size: 800, overlap: 150), and embeds segments via `all-MiniLM-L6-v2`.
+2. **Dual-Retrieval Core**:
+   * *Vector Search*: Cosine similarity computed against 384-dimensional dense vectors in PostgreSQL via `pgvector` operators (`<=>`).
+   * *Keyword Search*: Dynamic `rank_bm25` index built on-the-fly from the specific document's database chunks.
+3. **Score Fusion**: Normalizes BM25 scores via `MinMaxScaler` and blends them with vector similarity using a Weighted Linear Combination (WLC) ($\alpha = 0.7$).
+4. **Fallback Orchestrator State Machine**: Coordinates query degradation paths. Triggers query rewrites (Yellow), FlashRank reranking (Orange), or aborts synthesis to generate clarification prompts (Red) based on consensus confidence scores.
+
+---
+
+## 2. Directory Layout
 
 ```text
 ai-engine/
 ├── app/
-│   ├── main.py              # FastAPI initialization and REST routes
-│   ├── config.py            # Pydantic Settings and database paths
-│   ├── database.py          # SQLAlchemy Session and engine configuration
+│   ├── main.py              # FastAPI application server and REST routing
+│   ├── config.py            # Environment configurations (Pydantic Settings)
+│   ├── database.py          # SQLAlchemy Session and engine configurations
 │   ├── models.py            # SQLAlchemy database tables mapping
 │   ├── services/
-│   │   ├── ingestion.py     # PDF parsing, recursive splitting, and vector insertion
-│   │   ├── search_vector.py # pgvector cosine similarity search queries
-│   │   ├── search_keyword.py# rank_bm25 index building and search
-│   │   ├── fusion.py        # MinMaxScaler score scaling and WLC combination
-│   │   ├── retrieval.py     # Hybrid search orchestration manager
-│   │   ├── confidence.py    # MaxSim matrices and Agreement scoring calculator
-│   │   ├── llm.py           # LLM API queries, rewrites, and clarification generation
-│   │   └── fallback.py      # Self-healing routing state machine
-│   └── tests/               # pytest suites and property sensitivity benchmark
-└── requirements.txt         # Pip dependency list
+│   │   ├── ingestion.py     # Document text slicing & embedding database inserts
+│   │   ├── search_vector.py # pgvector cosine similarity SQL queries
+│   │   ├── search_keyword.py# rank_bm25 dynamic indexing
+│   │   ├── fusion.py        # MinMaxScaler and WLC fusion formula
+│   │   ├── confidence.py    # MaxSim and Consensus Agreement calculator
+│   │   ├── llm.py           # Ollama client and prompt constructors
+│   │   └── fallback.py      # Tiered fallback state machine orchestrator
+│   └── tests/               # pytest test cases
+└── requirements.txt         # Package dependencies list
 ```
 
 ---
 
-## Setup & Startup
+## 3. Configuration & Startup
 
 ### Prerequisites
-- Python 3.11+
-- Active PostgreSQL Database with `pgvector` extension
+* Python 3.11+
+* Active PostgreSQL database running on port `5432` with the `vector` extension loaded.
 
 ### 1. Installation
-Set up a virtual environment and install core packages:
+Initialize a Python virtual environment and install core packages:
 ```bash
 python -m venv .venv
 .venv\Scripts\activate      # Windows
@@ -54,33 +54,27 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-### 2. Environment Variables
-Configure the database link in your terminal or env context:
+### 2. Configure Environment (`ai-engine/.env`)
+Ensure connection parameters match your database setup:
 ```bash
-set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/phoenix
+database_url=postgresql://postgres:postgres@localhost:5432/phoenix
+llm_provider=ollama
+reranker_provider=flashrank
+ollama_url=http://localhost:11434
+ollama_model=mistral
+flashrank_model=ms-marco-MiniLM-L-6-v2
+embedding_model=all-MiniLM-L6-v2
 ```
 
-### 3. Startup
-Start the FastAPI server using Uvicorn:
+### 3. Start Application
 ```bash
 python -m uvicorn app.main:app --port 8000 --reload
 ```
 
 ---
 
-## REST Endpoints (Internal Interface)
+## 4. Troubleshooting & Debugging
 
-- `POST /internal/v1/ingest` - Parses PDF content, segments characters into chunks, computes dense vectors, and saves to database.
-- `POST /internal/v1/process-base` - Performs WLC fused Vector + BM25 keyword searches (returns raw chunks and relevance ratings).
-- `POST /internal/v1/process` - Coordinates fallback orchestration routing to return a synthesized, self-healed response.
-
----
-
-## Testing & Benchmarking
-
-Execute the unit/integration tests and property sensitivity benchmark using:
-```bash
-.venv\Scripts\python -m pytest
-```
-- **`test_fallback.py`**: Validates all state machine path transitions (Green, Yellow, Orange, Red).
-- **`test_sensitivity.py`**: Runs a benchmark comparing Hybrid search accuracy against Vector search, asserting Hit Rate @ 1 metrics.
+* **First-run Query Latency (ONNX Cache)**: The first time a query falls back to the Orange Path (FlashRank Reranking), FlashRank downloads the ONNX weights model from Hugging Face, causing a processing delay of up to 45 seconds. The model is cached locally for subsequent queries.
+* **Ollama Connection Refused**: If query generation crashes with connection errors, ensure the Ollama server is running locally on port `11434` (`ollama run mistral`).
+* **Timeout Incompatibilities**: Ensure the FastAPI uvicorn worker timeout is aligned with the Spring Boot RestClient read timeout (300 seconds) to prevent premature connection cancellations during weight loading.

@@ -1,22 +1,24 @@
 # Phoenix — Transparent Self-Healing Hybrid RAG Workspace
 
-Phoenix is a **Transparent Self-Healing Hybrid RAG** system designed specifically for technical documentation. Built using **Spring Boot 3.x**, **FastAPI**, and **React 18**, Phoenix bridges the "trust gap" inherent in black-box AI retrieval systems by making the entire retrieval, scoring, reranking, and fallback process fully observable and traceable for engineers.
+Phoenix is a **Transparent Self-Healing Hybrid RAG** system designed specifically for technical documentation (such as codebase references, configuration properties, and API manuals). 
+
+Built using **Spring Boot 3.3.x**, **FastAPI**, and **React 19**, Phoenix bridges the "trust gap" inherent in black-box AI retrieval systems by making the entire retrieval, scoring, reranking, and fallback process fully observable and traceable for engineers.
 
 ---
 
-## Why Phoenix?
+## 1. Problem Statement
 
-In traditional Retrieval-Augmented Generation (RAG) systems, developers are forced to trust a single generated response without any visibility into how it was formulated. This model fails in technical workspaces for several reasons:
+Traditional Retrieval-Augmented Generation (RAG) systems fail in technical workspaces for three key reasons:
 
-* **The Exact Match Dilemma**: Pure vector search is excellent at identifying semantic intent but frequently misses exact alphanumeric identifiers (like error codes, port numbers, or configuration flags) that sparse keyword search (BM25) would catch immediately.
-* **The "Black Box" Trust Gap**: When an AI answers a query incorrectly, developers have no way to diagnose whether the error occurred during database retrieval, score fusion, reranking, or final answer generation.
-* **Hallucinations on Weak Context**: Traditional RAG systems will attempt to synthesize an answer even when the underlying document search returns zero relevant context, leading to critical configuration hallucinations.
+* **The Alphanumeric Precision Gap**: Pure semantic vector search (cosine similarity on dense embeddings) frequently misses exact-match property keys, configuration properties (such as `spring.jpa.hibernate.ddl-auto`), or error codes, returning conceptually related but incorrect contexts.
+* **The "Black Box" Trust Gap**: When an AI answers incorrectly, developers cannot diagnose whether the breakdown occurred during database retrieval, fusion, reranking, or LLM synthesis.
+* **Hallucinations on Weak Context**: Generic RAG systems attempt to generate answers even when search matches return zero relevant context.
 
-**Phoenix solves these issues by combining a hybrid search engine with a self-healing fallback state machine, while rendering the entire pipeline's reasoning path in real-time.**
+**Phoenix resolves these issues by combining a hybrid search engine with a self-healing fallback state machine, while rendering the entire pipeline's reasoning path in real-time.**
 
 ---
 
-## Core Pillars
+## 2. Key Architecture & Features
 
 ### 🧭 Self-Healing Fallback Orchestration
 A FastAPI-driven orchestrator state machine dynamically manages query degradation. If initial retrieval scores are weak, the system automatically rewrites queries, escalates to Cross-Encoder reranking, or falls back to interactive clarification prompts to avoid hallucinations.
@@ -35,151 +37,59 @@ Row-level JPA query boundaries and Spring Security token interceptors ensure abs
 
 ---
 
-## Screenshots
+## 3. Technology Stack
 
-> [!NOTE]
-> *Visual assets will be captured and added to the `/assets` directory upon production deployment. Below is the intended layout.*
-
-| Component | Target Showcase | Placeholder Link |
-|---|---|---|
-| **Retrieval Engine Workspace** | Technical chat interface showing monospace inputs, empty state diagnostic summaries, and active setting checks. | `![Retrieval Engine](/assets/preview_workspace.png)` |
-| **Document Vault Catalog** | Dashed PDF drag-and-drop zone and dense file tree catalog lists. | `![Document Vault](/assets/preview_vault.png)` |
-| **Reasoning Timeline** | Collapsed terminal logs demonstrating the Yellow/Orange/Red query self-healing escalations. | `![Reasoning Timeline](/assets/preview_timeline.png)` |
-| **Citation Matrix** | Source card highlights syncing directly with lines in the active text bubble. | `![Citation Matrix](/assets/preview_citations.png)` |
+* **Frontend Console**: React 19 (Vite compilation), Zustand, Tailwind CSS, Framer Motion, react-markdown.
+* **API Gateway Service**: Java 21, Spring Boot 3.3.1, Spring Security, Hibernate ORM, Flyway Schema Migrations.
+* **AI & Retrieval Engine**: Python 3.11, FastAPI, SQLAlchemy ORM, `pgvector`, `SentenceTransformers` (all-MiniLM-L6-v2), `rank_bm25` (Okapi model), `FlashRank` Cross-Encoder (`ms-marco-MiniLM-L-6-v2`).
+* **Database & Infrastructure**: PostgreSQL 16, Docker Compose, Ollama Local Server (running `mistral`).
 
 ---
 
-## System Architecture
-
-Phoenix is structured as a modular monorepo, separating administrative operations from core RAG compute services:
+## 4. Repository Structure
 
 ```text
 phoenix/
-├── backend/          # Spring Boot: Authentication, Project Namespaces, Document Storage
-├── ai-engine/        # FastAPI: Embedding Generation, BM25 Indexing, Fallback Orchestration
-├── frontend/         # React SPA: Workspace UI, Store-driven layouts, Reasoning timeline
-└── Docs/             # Engineering Notes and Living Knowledge Base
-```
-
-*Note: For production deployments, it is recommended to replace the Mermaid runtime dynamically with static `.svg` visual exports located in `/assets/architecture.svg`.*
-
-### Hybrid Retrieval Interaction Flow
-
-```mermaid
-sequenceDiagram
-    autonumber
-    Client ->> FastAPI Endpoint: POST /internal/v1/process-base (query, documentId, limit, alpha)
-    FastAPI Endpoint ->> RetrievalService: retrieve_hybrid(document_id, query, limit, alpha)
-    RetrievalService ->> EmbeddingService: embed_text(query)
-    EmbeddingService -->> RetrievalService: query_embedding (384-dim list)
-    
-    par Vector Search
-        RetrievalService ->> VectorSearchService: search(db, document_id, query_embedding, limit*2)
-        VectorSearchService ->> DB: Query chunks (pgvector cosine similarity)
-        DB -->> VectorSearchService: Chunks & Cosine Distance
-        VectorSearchService -->> RetrievalService: List[(Chunk, Sim_vector)]
-    and Keyword Search
-        RetrievalService ->> KeywordSearchService: search(db, document_id, query, limit=None)
-        KeywordSearchService ->> DB: Query all chunks for document_id
-        DB -->> KeywordSearchService: Chunks
-        KeywordSearchService ->> KeywordSearchService: custom_tokenizer() & rank_bm25
-        KeywordSearchService -->> RetrievalService: List[(Chunk, Score_bm25_raw)]
-    end
-    
-    RetrievalService ->> WLCFusion: fuse(vector_results, keyword_results, alpha)
-    WLCFusion ->> MinMaxScaler: normalize(raw_bm25_scores)
-    MinMaxScaler -->> WLCFusion: normalized_bm25_scores
-    WLCFusion ->> WLCFusion: Match chunks by ID & compute WLC
-    WLCFusion -->> RetrievalService: Sorted List[(Chunk, Score_final)]
-    
-    RetrievalService -->> FastAPI Endpoint: Top K matches
-    FastAPI Endpoint -->> Client: JSON Response (matches, scores)
-```
-
-### Confidence Engine Dependency Graph
-
-```mermaid
-graph TD
-    VectorSearchService --> RetrievalService
-    KeywordSearchService --> RetrievalService
-    ConfidenceService --> RetrievalService
-    MaxSimExtractor --> ConfidenceService
-    AgreementCalculator --> ConfidenceService
-    RetrievalService --> FastAPI_Endpoint[FastAPI Endpoint /internal/v1/process-base]
+├── backend/          # Spring Boot: Security filters, project namespaces, document ingestion tasks
+├── ai-engine/        # FastAPI: Embedding pipelines, WLC fusions, fallback orchestrators
+├── frontend/         # React SPA: Workspace UI stores, timeline renders, citation matrices
+└── Docs/             # Production-grade engineering docs and living knowledge wiki
 ```
 
 ---
 
-## Technology Stack
-
-### Backend API
-- **Language & Runtime**: Java 21, Spring Boot 3.3.x
-- **Persistence**: Spring Data JPA, Hibernate, PostgreSQL
-- **Schema Management**: Flyway database migrations
-- **Security**: Spring Security, stateless JWT authentication
-
-### AI Engine
-- **Framework**: Python 3.11+, FastAPI, Uvicorn
-- **vector Search**: `pgvector` extension, SQLAlchemy ORM
-- **dense Embeddings**: HuggingFace `sentence-transformers` (all-MiniLM-L6-v2)
-- **sparse Search**: `rank_bm25` (In-Memory on-the-fly indexing)
-- **Reranker**: `FlashRank` Cross-Encoder (`ms-marco-TinyBERT-L-2-v2` ONNX)
-
-### Frontend Client
-- **Framework**: React 18 (Vite compiler)
-- **State Management**: Zustand
-- **Styling**: TailwindCSS (flat neutral technical palette)
-- **Icons**: Lucide React
-- **Testing**: Vitest, JSDOM
-
-### Infrastructure & Tooling
-- **Orchestration**: Docker Compose
-- **Database**: PostgreSQL 16 (pgvector pre-loaded)
-- **Dependency Management**: Maven (Java), pip (Python), npm (Frontend)
-
----
-
-## Setup & Installation
+## 5. Setup & Running Locally
 
 ### Prerequisites
-Ensure the following are installed locally:
-- Docker & Docker Compose
-- Java JDK 21
-- Node.js 18+ (npm)
-- Python 3.11+
+* Docker & Docker Compose
+* Java JDK 21
+* Node.js 18+ (npm)
+* Python 3.11+
+* Ollama Local Server (running `mistral` model)
 
-### 1. Start the Database Container
-Launch the PostgreSQL database preconfigured with the vector extension:
+### 1. Launch Database Container
 ```bash
 docker compose up -d
 ```
 
-### 2. Configure and Run the AI Engine
-Initialize the Python environment, install required packages, and run the FastAPI server:
+### 2. Configure & Run FastAPI Engine
 ```bash
 cd ai-engine
 python -m venv .venv
-
-# Activate Virtual Environment
-# On Windows:
-.venv\Scripts\activate
-# On macOS/Linux:
-# source .venv/bin/activate
-
+.venv\Scripts\activate      # Windows
+# source .venv/bin/activate # Unix/macOS
 pip install -r requirements.txt
 python -m uvicorn app.main:app --port 8000 --reload
 ```
 
-### 3. Start the Backend API
-Compile and package the Spring Boot microservice. The Flyway engine automatically initializes the database tables on startup:
+### 3. Build & Run Spring Boot Gateway
 ```bash
 cd backend
 mvn clean install
 mvn spring-boot:run
 ```
 
-### 4. Initialize the Frontend UI
-Install local npm libraries and start the Vite dev server:
+### 4. Initialize React Frontend
 ```bash
 cd frontend
 npm install
@@ -189,48 +99,24 @@ Open `http://localhost:5173` in your browser.
 
 ---
 
-## Configuration & Environment variables
+## 6. Complete Documentation Index
 
-Ensure the following default connection properties are defined in your active environment:
+All core architecture, database schemas, and engineering specifications are kept in the `/Docs` directory:
 
-| Service | Environment Variable | Default Value | Description |
-|---|---|---|---|
-| **Database Container** | `POSTGRES_DB` / `POSTGRES_USER` | `phoenix` / `postgres` | Configured inside `docker-compose.yml` |
-| **Spring Boot API** | `spring.datasource.url` | `jdbc:postgresql://localhost:5432/phoenix` | Spring Boot Database Connection URL |
-| **Spring Boot API** | `ai.engine.url` | `http://localhost:8000` | FastAPI Engine backend URL |
-| **Python FastAPI** | `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/phoenix` | SQLAlchemy pgvector connection string |
-
----
-
-## Core API Reference
-
-### Authentication Gateway
-* `POST /api/auth/register` - Create a new developer account.
-* `POST /api/auth/login` - Authenticate credentials and return a Bearer JWT token.
-
-### Project Management
-* `GET /api/projects` - List all projects owned by the authenticated tenant.
-* `POST /api/projects` - Initialize a new project workspace.
-* `DELETE /api/projects/{projectId}` - Delete a project workspace (cascades chunk deletions).
-
-### Document Ingestion
-* `GET /api/projects/{projectId}/documents` - List all uploaded technical manuals in the vault.
-* `POST /api/projects/{projectId}/upload` - Upload a technical PDF manual.
-
-### AI Engine (Internal Endpoints)
-* `POST /internal/v1/ingest` - Receives PDF layout text, generates semantic vectors, and saves chunks.
-* `POST /internal/v1/process-base` - Returns raw hybrid retrieved chunks and MinMaxScaler similarity scores.
-* `POST /internal/v1/process` - Coordinates fallback orchestration and outputs synthesized responses.
-
----
-
-## Project Roadmap
-
-The following enhancements are proposed for future development cycles:
-- [ ] **Streaming Responses**: Implement Server-Sent Events (SSE) for chunk-by-chunk token rendering.
-- [ ] **Multi-Document Retrieval**: Enable cross-document search boundaries within a single project namespace.
-- [ ] **Evaluation Framework**: Integrate automated RAG evaluation metrics (e.g. Ragas / TruLens) for retrieval accuracy tracking.
-- [ ] **LangGraph Orchestration**: Refactor the custom state machine into a LangGraph agent system for complex routing paths.
-- [ ] **Distributed Vector Stores**: Integrate external vector services (like pgvector cluster nodes) for massive document scaling.
-
----
+| Document Category | Target Specification | Reference File Link |
+|---|---|---|
+| **Product Planning** | Core requirements, target personas, and scope bounds. | [PRD.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/PRD.md) |
+| **System Features** | Functional API, AI, and client specifications. | [Feature_List.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Feature_List.md) |
+| **Infrastructure Stack** | Software dependencies and versions matrix. | [Tech%20Stack.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Tech%20Stack.md) |
+| **Execution Flow** | Sequence lifecycles and fallback diagrams. | [AppFlow.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/AppFlow.md) |
+| **Visual Design** | Color tokens, panel layouts, and CSS classes. | [Design.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Design.md) |
+| **Core RAG Logic** | Mathematical fusions and state orchestrations. | [RAG_Architecture.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/RAG_Architecture.md) |
+| **API Contract** | Gateway REST specifications and payload DTO shapes. | [API_Specification.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/API_Specification.md) |
+| **Data Schema** | Shared PostgreSQL and pgvector ERD models. | [DB_Schema.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/DB_Schema.md) |
+| **Security Framework** | Cryptography, filters, and attack mitigations. | [Security.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Security.md) |
+| **Dependency Strategy**| Ollama, embeddings, and database providers configurations. | [Provider_Strategy.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Provider_Strategy.md) |
+| **Future Streaming** | Planned STOMP WebSocket interface specifications. | [WebSocket_Architecture.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/WebSocket_Architecture.md) |
+| **Exceptions & Resiliency**| Global handlers, timeouts, and JSON error structures. | [Error_Handling.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Error_Handling.md) |
+| **Testing Strategy** | Integration validation and hit-rate benchmarking. | [Testing_Strategy.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Testing_Strategy.md) |
+| **Knowledge Wiki** | Consolidated design decisions and guides. | [Engineering_Knowledge_Base.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Engineering_Knowledge_Base.md) |
+| **Release Management** | Release notes, milestones, and system limitations. | [Release_Notes.md](file:///d:/Coding/Projects----For%20Resume/Phoenix/Docs/Release_Notes.md) |
