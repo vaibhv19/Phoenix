@@ -1,165 +1,270 @@
-# Phoenix API Specification
+# API Specification: Phoenix
 
-This document defines the two distinct API contracts for the **Phoenix** system:
-1. **Part A: Public REST API** — The interface between the React Frontend and the Spring Boot API.
-2. **Part B: Internal Service Interface** — The private bridge between the Spring Boot API and the Python AI Engine.
+This document defines the REST API contracts implemented in **Phoenix**, divided into:
+1. **Part A: Public Client REST API** — The interface between the React Frontend and the Spring Boot Gateway.
+2. **Part B: Private Internal Service Interface** — The bridge between the Spring Boot Gateway and the FastAPI AI Engine.
 
 ---
 
-## Part A: Public REST API (Spring Boot → React)
+## Part A: Public Client REST API (Spring Boot Gateway)
 
-### 1. Global Conventions
-- **Base URL:** `http://localhost:8080/api`
-- **Auth Scheme:** HTTP Bearer Token (JWT)
-- **Error Format:**
+### 1. Global Specifications & Protocols
+* **Base Endpoint**: `http://localhost:8080/api`
+* **Transport Protocol**: HTTP/1.1 (JSON payload bodies)
+* **Authentication**: Stateless Bearer JWT Header (`Authorization: Bearer <JWT>`)
+* **Standard Error Model**:
   ```json
   {
-    "status": 400,
-    "error": "Bad Request",
-    "message": "Specific error detail",
-    "traceId": "uuid"
+    "error": "Bad Request | Forbidden | Not Found",
+    "message": "Detailed error string describing the boundary failure."
   }
   ```
 
-### 2. Authentication (`/auth`)
-| Path | Method | Description | Request Body | Response Body |
-| :--- | :--- | :--- | :--- | :--- |
-| `/login` | `POST` | Authenticates user | `{ "email", "password" }` | `{ "token", "refreshToken", "user" }` |
-| `/register` | `POST` | Creates new account | `{ "email", "password", "name" }` | `{ "token", "user" }` |
+---
 
-### 3. Document Management (`/documents`)
-| Path | Method | Description | Request | Response |
-| :--- | :--- | :--- | :--- | :--- |
-| `/upload` | `POST` | Uploads PDF for RAG processing | `MultipartFile` | `DocumentResponse` |
-| `/` | `GET` | Lists all uploaded documents | None | `List<DocumentResponse>` |
-| `/{id}/status` | `GET` | Polling for ingestion progress | Path Variable `id` | `{ "status": "PROCESSING|READY|FAILED" }` |
+### 2. Authentication Services (`/api/auth`)
 
-### 4. Chat & Retrieval (`/chat`)
-| Path | Method | Description | Request | Response |
-| :--- | :--- | :--- | :--- | :--- |
-| `/query` | `POST` | Main RAG interface | `ChatRequest` | `ChatResponse` |
-| `/history` | `GET` | Fetches previous interactions | Query: `limit`, `offset` | `List<ChatResponse>` |
+These endpoints are unprotected by the security filter to allow registration and authentication.
 
-### 5. Project Management (`/projects`)
-| Path | Method | Description | Request | Response |
-| :--- | :--- | :--- | :--- | :--- |
-| `/` | `GET` | Lists all projects for the tenant | None | `List<ProjectResponse>` |
-| `/` | `POST` | Creates a new project workspace | `{ "name" }` | `ProjectResponse` |
-| `/{id}` | `DELETE` | Deletes project and cascades disk/DB cleanup | Path Variable `id` | None (204 No Content) |
-
-#### Key DTO Shapes (Part A):
-**`ChatRequest`**:
-```json
-{
-  "documentId": "UUID",
-  "query": "string (The technical question)"
-}
-```
-
-**`ReasoningStepDto`**:
-```json
-{
-  "step": "string (Stage of retrieval lifecycle, e.g., 'INITIAL_RETRIEVAL', 'FALLBACK_REWRITE', 'FALLBACK_RERANK', 'FALLBACK_CLARIFY')",
-  "action": "string (The system operation performed, e.g., 'Query rewriting using HyDE-light')",
-  "outcome": "string (The result or metrics of the step, e.g., 'Expanded query to: Spring Boot DDL auto config')"
-}
-```
-
-**`ChatResponse`**:
-```json
-{
-  "chatId": "UUID",
-  "answer": "string (Markdown format)",
-  "confidenceScore": 0.85,
-  "sources": [
-    {
-      "chunkId": "string",
-      "text": "snippet of content...",
-      "pageNumber": 12,
-      "relevanceScore": 0.91
+#### 2.1 User Registration
+* **Method**: `POST`
+* **Route**: `/api/auth/register`
+* **Validation Rules**:
+  * `username`: Not Blank (Unique)
+  * `email`: Not Blank, Valid Email Address format
+  * `password`: Not Blank
+* **Request Payload**:
+  ```json
+  {
+    "username": "vaibhav",
+    "email": "vaibhav@gmail.com",
+    "password": "SecurePassword123",
+    "confirmPassword": "SecurePassword123",
+    "fullName": "Vaibhav Gupta"
+  }
+  ```
+* **Response Payload (200 OK)**:
+  ```json
+  {
+    "token": "eyJhbGciOiJIUzI1NiJ9...",
+    "refreshToken": "7c1cb08e-5b12...",
+    "user": {
+      "id": "17f9dc0d-f37e-4c84-b65d-d9dd8a17fac3",
+      "email": "vaibhav@gmail.com",
+      "username": "vaibhav",
+      "fullName": "Vaibhav Gupta"
     }
-  ],
-  "reasoningTrace": [
-    {
-      "step": "INITIAL_RETRIEVAL",
-      "action": "Hybrid search (Vector + BM25)",
-      "outcome": "Low confidence (0.32) detected"
-    },
-    {
-      "step": "FALLBACK_REWRITE",
-      "action": "Query rewriting",
-      "outcome": "Expanded query to: 'Spring Boot DDL auto config'"
-    }
-  ] // Serialized array of ReasoningStepDto objects
-}
-```
+  }
+  ```
+
+#### 2.2 User Login
+* **Method**: `POST`
+* **Route**: `/api/auth/login`
+* **Request Payload**:
+  ```json
+  {
+    "username": "vaibhav",
+    "password": "SecurePassword123"
+  }
+  ```
+* **Response Payload (200 OK)**: Same schema as User Registration.
 
 ---
 
-## Part B: Internal AI Interface (Spring Boot → Python AI Engine)
+### 3. Project Workspace Management (`/api/projects`)
 
-This is a private service-to-service contract. Communication is optimized for technical data volume.
+Requires Authorization header.
 
-### 1. Document Ingestion (`/ingest`)
-- **Endpoint:** `POST /internal/v1/ingest`
-- **Description:** Spring Boot notifies Python engine to begin the PDF chunking and embedding pipeline.
-
-**Request Payload:**
-```json
-{
-  "documentId": "UUID",
-  "filePath": "string (Internal path to local/shared storage)",
-  "config": {
-    "chunkSize": 1000,
-    "chunkOverlap": 200
+#### 3.1 Create Workspace
+* **Method**: `POST`
+* **Route**: `/api/projects`
+* **Request Payload**:
+  ```json
+  {
+    "name": "Spring Core Audits"
   }
-}
-```
+  ```
+* **Response Payload (200 OK)**:
+  ```json
+  {
+    "id": "68a2878e-aa01-43c4-9f48-6ad150b7fe03",
+    "userId": "17f9dc0d-f37e-4c84-b65d-d9dd8a17fac3",
+    "name": "Spring Core Audits",
+    "createdAt": "2026-07-30T07:13:52Z"
+  }
+  ```
 
-**Response Payload:**
-```json
-{
-  "documentId": "UUID",
-  "chunkCount": 154,
-  "embeddingStatus": "COMPLETED",
-  "vectorIndexName": "idx_doc_uuid",
-  "processingTimeMs": 4500
-}
-```
+#### 3.2 List Workspaces
+* **Method**: `GET`
+* **Route**: `/api/projects`
+* **Response Payload (200 OK)**: Array of Workspace objects.
 
-### 2. Retrieval & Inference (`/process`)
-- **Endpoint:** `POST /internal/v1/process`
-- **Description:** Executes the hybrid retrieval, confidence calculation, and optional fallback strategies.
+#### 3.3 Delete Workspace
+* **Method**: `DELETE`
+* **Route**: `/api/projects/{id}`
+* **Response (204 No Content)**: Deletes all database project configurations and physical uploads cascaded.
 
-**Request Payload:**
-```json
-{
-  "query": "How do I configure a custom DataSource?",
-  "documentId": "UUID",
-  "topK": 5,
-  "enableFallbacks": true
-}
-```
+---
 
-**Response Payload:**
-```json
-{
-  "answer": "string",
-  "confidence": 0.92,
-  "retrievalMetadata": {
-    "vectorScore": 0.88,
-    "keywordScore": 0.95,
-    "strategyUsed": "HYBRID_FUSION"
-  },
-  "rawChunks": [
-    {
-      "id": "chunk_1",
-      "content": "...",
-      "metadata": { "page": 4 }
-    }
-  ],
-  "trace": [
-    { "type": "INFO", "msg": "Vector search returned 0.4 score; triggering BM25" }
-  ]
-}
-```
+### 4. Document Management (`/api/documents`)
+
+Requires Authorization header.
+
+#### 4.1 Upload Document
+* **Method**: `POST`
+* **Route**: `/api/documents/upload`
+* **Parameters**:
+  * `file`: MultipartFile (Binary PDF)
+  * `projectId`: UUID (Target project workspace)
+* **Response Payload (200 OK)**:
+  ```json
+  {
+    "id": "a94936bc-f49d-424d-a90b-d1f159787da7",
+    "projectId": "68a2878e-aa01-43c4-9f48-6ad150b7fe03",
+    "fileName": "spring_boot_ref.pdf",
+    "status": "PROCESSING",
+    "storagePath": "D:\\Coding\\Projects----For Resume\\Phoenix\\backend\\storage\\a94936bc-f49d-424d-a90b-d1f159787da7.pdf",
+    "chunkCount": null
+  }
+  ```
+
+#### 4.2 List Documents
+* **Method**: `GET`
+* **Route**: `/api/documents`
+* **Query Parameters**:
+  * `projectId`: UUID
+* **Response Payload (200 OK)**: Array of DocumentResponse objects.
+
+#### 4.3 Get Document Status
+* **Method**: `GET`
+* **Route**: `/api/documents/{id}/status`
+* **Response Payload (200 OK)**:
+  ```json
+  {
+    "id": "a94936bc-f49d-424d-a90b-d1f159787da7",
+    "projectId": "68a2878e-aa01-43c4-9f48-6ad150b7fe03",
+    "fileName": "spring_boot_ref.pdf",
+    "status": "READY",
+    "storagePath": "D:\\Coding\\Projects----For Resume\\Phoenix\\backend\\storage\\a94936bc-f49d-424d-a90b-d1f159787da7.pdf",
+    "chunkCount": 154
+  }
+  ```
+
+---
+
+### 5. Chat & Retrieval Services (`/api/chat`)
+
+Requires Authorization header.
+
+#### 5.1 Query RAG
+* **Method**: `POST`
+* **Route**: `/api/chat/query`
+* **Request Payload**:
+  ```json
+  {
+    "documentId": "a94936bc-f49d-424d-a90b-d1f159787da7",
+    "query": "what is the default server port?"
+  }
+  ```
+* **Response Payload (200 OK)**:
+  ```json
+  {
+    "chatId": "f1d50c77-cb36-4899-a03a-66b2cddf4f81",
+    "question": "what is the default server port?",
+    "answer": "The default server port in Spring Boot is configured to `8080`...",
+    "confidenceScore": 0.7887,
+    "reasoningTrace": [
+      {
+        "state": "INITIAL_RETRIEVAL",
+        "confidenceScore": 0.6308,
+        "description": "Initial retrieval completed. Confidence score: 0.6308."
+      },
+      {
+        "state": "FALLBACK_REWRITE",
+        "confidenceScore": 0.7887,
+        "description": "Confidence is yellow (0.6308). Rewrote query..."
+      }
+    ],
+    "matches": [
+      {
+        "id": "d74261b0-9a25-4f40-b6fa-537482811a2f",
+        "documentId": "a94936bc-f49d-424d-a90b-d1f159787da7",
+        "chunkIndex": 12,
+        "content": "The property server.port defaults to 8080 in application.properties.",
+        "score": 0.7887,
+        "metadata": {
+          "page_number": 4
+        }
+      }
+    ]
+  }
+  ```
+
+#### 5.2 Get Chat History
+* **Method**: `GET`
+* **Route**: `/api/chat/history`
+* **Query Parameters**:
+  * `projectId`: UUID
+* **Response Payload (200 OK)**: List of ChatResponse objects.
+
+---
+
+## Part B: Private Internal Service Interface (FastAPI Engine)
+
+The Spring Boot Gateway coordinates communication with the FastAPI engine over private HTTP endpoints.
+
+### 1. Ingestion Endpoint
+* **Method**: `POST`
+* **Route**: `/internal/v1/ingest`
+* **Request Payload**:
+  ```json
+  {
+    "documentId": "a94936bc-f49d-424d-a90b-d1f159787da7",
+    "filePath": "D:\\Coding\\Projects----For Resume\\Phoenix\\backend\\storage\\a94936bc-f49d-424d-a90b-d1f159787da7.pdf"
+  }
+  ```
+* **Response Payload (200 OK)**:
+  ```json
+  {
+    "status": "success",
+    "document_id": "a94936bc-f49d-424d-a90b-d1f159787da7",
+    "chunks_count": 154
+  }
+  ```
+
+### 2. Query Processing Endpoint
+* **Method**: `POST`
+* **Route**: `/internal/v1/process`
+* **Request Payload**:
+  ```json
+  {
+    "documentId": "a94936bc-f49d-424d-a90b-d1f159787da7",
+    "query": "what is the default server port?"
+  }
+  ```
+* **Response Payload (200 OK)**:
+  ```json
+  {
+    "answer": "The default server port in Spring Boot is configured to `8080`...",
+    "confidenceScore": 0.7887,
+    "reasoningTrace": [
+      {
+        "state": "INITIAL_RETRIEVAL",
+        "confidenceScore": 0.6308,
+        "description": "Initial retrieval completed."
+      }
+    ],
+    "matches": [
+      {
+        "id": "d74261b0-9a25-4f40-b6fa-537482811a2f",
+        "document_id": "a94936bc-f49d-424d-a90b-d1f159787da7",
+        "chunk_index": 12,
+        "content": "...",
+        "score": 0.7887,
+        "metadata": {
+          "page_number": 4
+        }
+      }
+    ]
+  }
+  ```
