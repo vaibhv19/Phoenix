@@ -32,59 +32,19 @@ export default function Layout({ children }) {
 
   const getUserDisplayName = () => {
     if (!user) return 'User'
-    
-    // 1. displayName
-    if (user.displayName && typeof user.displayName === 'string' && user.displayName.trim()) {
-      return user.displayName.trim()
-    }
-    
-    // 2. full_name
-    if (user.full_name && typeof user.full_name === 'string' && user.full_name.trim()) {
-      return user.full_name.trim()
-    }
-    
-    // 3. name
-    if (user.name && typeof user.name === 'string' && user.name.trim()) {
-      return user.name.trim()
-    }
-    
-    // 4. first_name + last_name
-    const hasFirstName = user.first_name && typeof user.first_name === 'string' && user.first_name.trim()
-    const hasLastName = user.last_name && typeof user.last_name === 'string' && user.last_name.trim()
-    if (hasFirstName || hasLastName) {
-      return `${user.first_name || ''} ${user.last_name || ''}`.trim()
-    }
-    
-    // Check if user.username is not an email
-    const isEmail = (str) => typeof str === 'string' && str.includes('@')
-    if (user.username && !isEmail(user.username)) {
-      return user.username.trim()
-    }
-    
-    // Fallback: derive name from email username (email left side)
-    const emailToParse = user.email || (isEmail(user.username) ? user.username : '')
-    if (emailToParse) {
-      const leftSide = emailToParse.split('@')[0]
-      const parts = leftSide.split(/[._\-+]/)
-      const capitalized = parts
-        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-        .filter(Boolean)
-        .join(' ')
-      if (capitalized) return capitalized
-    }
-    
     return user.username || 'User'
   }
 
   const userDisplayName = getUserDisplayName()
 
-  const getUserInitials = (name) => {
-    if (!name) return 'US'
-    const parts = name.split(/\s+/)
-    if (parts.length >= 2) {
+  const getUserInitials = (username) => {
+    if (!username) return 'US'
+    const cleanUsername = username.trim()
+    const parts = cleanUsername.split(/[._\-]/)
+    if (parts.length >= 2 && parts[0] && parts[1]) {
       return (parts[0][0] + parts[1][0]).toUpperCase()
     }
-    return name.substring(0, 2).toUpperCase()
+    return cleanUsername.substring(0, 2).toUpperCase()
   }
 
   const userInitials = getUserInitials(userDisplayName)
@@ -427,7 +387,7 @@ export default function Layout({ children }) {
               <div className={`absolute bottom-16 left-3 bg-[#0e0e11] border border-zinc-855 rounded-lg p-2 shadow-2xl z-50 animate-slide-in ${isSidebarOpen ? 'right-3' : 'w-48'}`}>
                 <div className="p-2 text-xs border-b border-zinc-855 select-none">
                   <p className="font-semibold text-zinc-300 truncate">{userDisplayName}</p>
-                  <p className="text-[10px] text-zinc-500 truncate mt-0.5">{user?.email || (userDisplayName !== user?.username ? user?.username : 'authenticated')}</p>
+                  <p className="text-[10px] text-zinc-500 truncate mt-0.5">{user?.email}</p>
                 </div>
                 <button 
                   onClick={handleLogout}
@@ -452,7 +412,7 @@ export default function Layout({ children }) {
                   </div>
                   <div className="truncate max-w-[110px]">
                     <p className="text-xs font-medium text-zinc-300 truncate group-hover:text-zinc-150 transition">{userDisplayName}</p>
-                    <p className="text-[9px] text-zinc-500 truncate">{user?.email || (userDisplayName !== user?.username ? user?.username : 'authenticated')}</p>
+                    <p className="text-[9px] text-zinc-500 truncate">{user?.email}</p>
                   </div>
                 </div>
                 <button 
