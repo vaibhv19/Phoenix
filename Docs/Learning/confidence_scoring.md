@@ -26,9 +26,10 @@ Dividing by 3 normalizes the score into discrete buckets: $0.0$ (no overlap), $0
 $$CS = 0.6 \cdot MaxSim + 0.4 \cdot Agreement$$
 This yields a unified metric $CS \in [0.0, 1.0]$. 
 Based on $CS$, retrieval quality can be classified as:
-- **Green** ($CS \geq 0.8$): Highly reliable context.
-- **Yellow** ($0.5 \leq CS < 0.8$): Partially reliable context.
-- **Red** ($CS < 0.5$): Unreliable context; fallback workflows should be triggered.
+- **Green** ($CS \geq 0.75$): Highly reliable context.
+- **Yellow** ($0.50 \le CS < 0.75$): Partially reliable context (triggers Query Rewriting).
+- **Orange** ($0.35 \le CS < 0.50$): Marginal context (triggers FlashRank Reranking).
+- **Red** ($CS < 0.35$): Unreliable context (triggers Clarification Question).
 
 ## 4. Alternative Approaches
 - **Pure Semantic Cutoff**: Setting a hard threshold on the cosine similarity score. While simple, cosine similarity thresholds are highly sensitive to embedding models, corpus distribution, and query lengths, leading to high false positive/negative rates.
