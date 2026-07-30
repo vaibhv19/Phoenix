@@ -1,7 +1,6 @@
 {
-  "venvPath": "ai-engine",
-  "venv": ".venv",
-  "pythonPath": "ai-engine/.venv/Scripts/python.exe",
+  "venvPath": ".",
+  "venv": "ai-engine/.venv",
   "extraPaths": [
     "ai-engine"
   ],
