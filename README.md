@@ -4,6 +4,12 @@ Phoenix is a **Transparent Self-Healing Hybrid RAG** system designed specificall
 
 Built using **Spring Boot 3.3.x**, **FastAPI**, and **React 19**, Phoenix bridges the "trust gap" inherent in black-box AI retrieval systems by making the entire retrieval, scoring, reranking, and fallback process fully observable and traceable for engineers.
 
+Note: Phoenix runs entirely locally by design — see [Setup & Running Locally](#setup--running-locally) below. No hosted demo is provided.
+
+<!-- TODO: replace with real screenshot of the Investigation Console -->
+![Phoenix Investigation Console](Docs/assets/investigation-console-demo.png)
+*Figure 1: The Phoenix Investigation Console interface visualizing RAG retrieval scores, consensus Jaccard agreement metrics, and active fallback pipelines.*
+
 ---
 
 ## 1. Problem Statement
@@ -37,7 +43,34 @@ Row-level JPA query boundaries and Spring Security token interceptors ensure abs
 
 ---
 
-## 3. Technology Stack
+## 3. System Architecture
+
+The following diagram maps the execution flow of a user query through the self-healing hybrid retrieval pipeline:
+
+```text
+[React Frontend Console]
+          │
+          ▼ (REST/JWT)
+[Spring Boot Gateway Service]
+          │
+          ▼ (Async REST /internal/v1/process)
+[FastAPI Retrieval Engine] ◄────────────────────────────────┐
+          │                                                 │
+          ├─► [Vector Search Service] ──► pgvector          │
+          ├─► [Keyword Search Service] ──► BM25             │ (Fallback Loop:
+          │                                                 │  CS < 0.75)
+          ▼ (Score Fusion & CS Calculation)                 │
+  [Composite Confidence Score (CS)]                         │
+          │                                                 │
+          ├─► [Green Path (CS >= 0.75)] ──► Ollama (Mistral)│
+          ├─► [Yellow Path (CS 0.50-0.75)] ──► LLM Rewrite ─┘
+          ├─► [Orange Path (CS 0.35-0.50)] ──► FlashRank Cross-Encoder
+          └─► [Red Path (CS < 0.35)] ────────► Clarification Prompt
+```
+
+---
+
+## 4. Technology Stack
 
 * **Frontend Console**: React 19 (Vite compilation), Zustand, Tailwind CSS, Framer Motion, react-markdown.
 * **API Gateway Service**: Java 21, Spring Boot 3.3.1, Spring Security, Hibernate ORM, Flyway Schema Migrations.
@@ -46,7 +79,7 @@ Row-level JPA query boundaries and Spring Security token interceptors ensure abs
 
 ---
 
-## 4. Repository Structure
+## 5. Repository Structure
 
 ```text
 phoenix/
@@ -58,7 +91,7 @@ phoenix/
 
 ---
 
-## 5. Setup & Running Locally
+## 6. Setup & Running Locally
 
 ### Prerequisites
 * Docker & Docker Compose
@@ -99,7 +132,7 @@ Open `http://localhost:5173` in your browser.
 
 ---
 
-## 6. Complete Documentation Index
+## 7. Complete Documentation Index
 
 All core architecture, database schemas, and engineering specifications are kept in the `/Docs` directory:
 
@@ -107,8 +140,8 @@ All core architecture, database schemas, and engineering specifications are kept
 |---|---|---|
 | **Product Planning** | Core requirements, target personas, and scope bounds. | [PRD.md](Docs/PRD.md) |
 | **System Features** | Functional API, AI, and client specifications. | [Feature_List.md](Docs/Feature_List.md) |
-| **Infrastructure Stack** | Software dependencies and versions matrix. | [Tech%20Stack.md](Docs/Tech Stack.md) |
-| **Execution Flow** | Sequence lifecycles and fallback diagrams. | [AppFlow.md](Docs/AppFlow.md) |
+| **Infrastructure Stack** | Software dependencies and versions matrix. | [Tech_Stack.md](Docs/Tech_Stack.md) |
+| **Execution Flow** | Sequence lifecycles and fallback diagrams. | [App_Flow.md](Docs/App_Flow.md) |
 | **Visual Design** | Color tokens, panel layouts, and CSS classes. | [Design.md](Docs/Design.md) |
 | **Core RAG Logic** | Mathematical fusions and state orchestrations. | [RAG_Architecture.md](Docs/RAG_Architecture.md) |
 | **API Contract** | Gateway REST specifications and payload DTO shapes. | [API_Specification.md](Docs/API_Specification.md) |
@@ -120,3 +153,9 @@ All core architecture, database schemas, and engineering specifications are kept
 | **Testing Strategy** | Integration validation and hit-rate benchmarking. | [Testing_Strategy.md](Docs/Testing_Strategy.md) |
 | **Knowledge Wiki** | Consolidated design decisions and guides. | [Engineering_Knowledge_Base.md](Docs/Engineering_Knowledge_Base.md) |
 | **Release Management** | Release notes, milestones, and system limitations. | [Release_Notes.md](Docs/Release_Notes.md) |
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
