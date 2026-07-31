@@ -1,60 +1,62 @@
-# Phoenix — Master Implementation Roadmap Index
+# Phoenix — Master Engineering Playbook Index
 
-This document acts as the authoritative index and master blueprint for the step-by-step implementation of **Phoenix**, a portfolio-quality Hybrid RAG (Retrieval-Augmented Generation) system over technical documentation. 
+This document serves as the canonical index and master directory for the **Phoenix Engineering Implementation Playbook**, a self-contained, developer-ready execution guide. 
 
-Phoenix is designed as a three-tier decoupled architecture:
-1. **Spring Boot API (Backend Orchestration)**: Handles user, project, document metadata, audit history, security, and internal service handoff.
-2. **Python AI Engine (FastAPI Service)**: Manages PDF ingestion (parsing, chunking, embeddings), hybrid search (pgvector + BM25), score fusion (WLC + MinMaxScaler), and fallback execution (expansion, Cross-Encoder re-ranking, and clarification).
-3. **React Client (Frontend UI)**: Implements the user portal, document vault, and interactive chat interface with source citations and a transparent Reasoning Trace timeline panel.
+Using this playbook, an engineer can build the complete Phoenix system from an empty workspace to a fully functioning local application without relying on external guides or undocumented development details.
+
+Phoenix is built on a decoupled three-tier architecture:
+1. **Spring Boot Orchestrator (`backend`)**: Manages logical user-project workspaces, handles JWT authorization, stores documents, and logs chat history.
+2. **FastAPI Retrieval Engine (`ai-engine`)**: Implements PDF ingestion, Recursive character splitting, pgvector indexing, and executes dual-engine hybrid retrieval (Dense Vector + BM25).
+3. **React Vite Console (`frontend`)**: Renders the document vault, interactive chat console, citation matrix, and collapsible vertical reasoning timelines.
 
 ---
 
-## 1. Master Dependency Graph
+## 1. Playbook Dependency Graph
 
-The following graph maps the sequential dependencies across repositories (Spring Boot, Python FastAPI, and React). Crucially, cross-service contracts must be established before dependent service integrations are implemented.
+The following graph maps the sequential execution dependencies across backend, frontend, and AI retrieval components. Establish service-to-service communication contracts before starting dependent integration layers.
 
 ```mermaid
 graph TD
-    %% Base Infrastructure
-    subgraph Base [Infrastructure & Setup]
-        P1[Phase 1: Project Setup]
+    %% Base Setup
+    subgraph Setup [1. Environment Scaffold]
+        P1[Phase 1: Project Setup & Docker DB]
     end
 
-    %% Spring Boot Branch
-    subgraph SB [Spring Boot Orchestration]
-        P2[Phase 2: Database Schema & Entities] --> P3[Phase 3: Authentication & Security]
-        P3 --> P4[Phase 4: Document & Project Management]
+    %% Spring Boot Gateway
+    subgraph SpringBoot [2. Orchestration & Security]
+        P2[Phase 2: Database Schema & JWT Auth] --> P3[Phase 3: User-Tenant Isolation]
+        P3 --> P4[Phase 4: Document Storage & Async Trigger]
     end
 
-    %% Python AI Engine Branch
-    subgraph PY [Python AI Retrieval Engine]
-        P5[Phase 5: Ingestion Pipeline & Embeddings] --> P6[Phase 6: WLC Hybrid Search]
-        P6 --> P7[Phase 7: Confidence Scoring Model]
-        P7 --> P8[Phase 8: Fallback State Machine]
+    %% Python Retrieval Engine
+    subgraph AIEngine [3. Semantic Search Engine]
+        P5[Phase 5: PDF Parser & pgvector Ingest] --> P6[Phase 6: WLC Hybrid Search]
+        P6 --> P7[Phase 7: Clamped Confidence Scorer]
+        P7 --> P8[Phase 8: 4-Tier Fallback State Machine]
     end
 
-    %% React Client Branch
-    subgraph RX [React Client Interface]
-        P9[Phase 9: React UI Development]
+    %% React UI Console
+    subgraph ReactUI [4. Interactive UI Portal]
+        P9[Phase 9: React Client Console & Timelines]
     end
 
-    %% Cross-Repository Dependencies
+    %% E2E Testing & Release
+    subgraph Verification [5. Verification & Audit]
+        P10[Phase 10: JUnit, Pytest, & Hit Rate Benchmarks]
+        P11[Phase 11: Flat Knowledge Base & Sweeps]
+    end
+
+    %% Cross-Project Dependencies
     P1 --> P2
     P1 --> P5
     
-    %% API Specification dependencies
-    P5 --> P4 %% Ingest endpoint contract must exist before Spring Boot calls it
-    P8 --> P4 %% Process endpoint contract must exist before Spring Boot calls it
+    %% API Contracts
+    P5 --> P4 %% FastAPI /ingest contract binds to Spring Boot caller
+    P8 --> P4 %% FastAPI /process contract binds to Spring Boot caller
     
-    %% Client-Server dependencies
-    P3 --> P9 %% Authentication API must exist before React Auth integration
-    P4 --> P9 %% Document & Chat query API must exist before React UI screens
-    
-    %% Testing & Release
-    subgraph Verification [Verification & Audit]
-        P10[Phase 10: E2E Testing]
-        P11[Phase 11: Documentation & Audit]
-    end
+    %% UI to API
+    P2 --> P9 %% Auth APIs bind to Zustand store
+    P4 --> P9 %% Chat query APIs bind to UI layout
     
     P4 --> P10
     P8 --> P10
@@ -64,95 +66,59 @@ graph TD
 
 ---
 
-## 2. Phase-by-Phase Development Roadmap
+## 2. Playbook Phases & Directory Mappings
 
-The roadmap is structured into 11 sequential phases. Each phase is documented in its own markdown file containing the package layout, component structures, API contracts, and atomic implementation tasks.
+The playbook contains 11 self-contained engineering guides detailing prerequisites, setup, implementation paths, verification commands, and troubleshooting tips.
 
-| Phase | Relative Link | Summary | Estimated Complexity |
-| :--- | :--- | :--- | :--- |
-| **Phase 1** | [Phase_01_Project_Setup.md](Phase_01_Project_Setup.md) | Initialize project repositories, build skeletons, configurations, and Docker database infrastructure. | Low |
-| **Phase 2** | [Phase_02_Authentication.md](Phase_02_Authentication.md) | Implement JWT authentication, Spring Security filters, and session management. | Medium |
-| **Phase 3** | [Phase_03_Projects.md](Phase_03_Projects.md) | Create user-tenant Project bounds and manage logical metadata isolation. | Low |
-| **Phase 4** | [Phase_04_Document_Upload.md](Phase_04_Document_Upload.md) | Handle physical file uploads, Spring storage abstraction, and handoff to the AI Engine. | Medium |
-| **Phase 5** | [Phase_05_Python_AI_Engine.md](Phase_05_Python_AI_Engine.md) | Setup FastAPI, configure `RecursiveCharacterTextSplitter` and `pgvector` store. | Medium |
-| **Phase 6** | [Phase_06_Hybrid_Retrieval.md](Phase_06_Hybrid_Retrieval.md) | Build WLC fusion (`Sim_vector` + normalized BM25 with `MinMaxScaler`). | High |
-| **Phase 7** | [Phase_07_Confidence_Scoring.md](Phase_07_Confidence_Scoring.md) | Code the Composite Confidence Score ($CS$) using MaxSim and Agreement. | Medium |
-| **Phase 8** | [Phase_08_Fallback_Strategies.md](Phase_08_Fallback_Strategies.md) | Build the 4-tier state machine (Rewrite -> Re-rank via FlashRank -> Clarify). | High |
-| **Phase 9** | [Phase_09_React_Frontend.md](Phase_09_React_Frontend.md) | Develop the Vault, Chat interface, vertical timeline, and Citation Matrix. | High |
-| **Phase 10** | [Phase_10_Testing.md](Phase_10_Testing.md) | Execute end-to-end integration flows, including Property Key Sensitivity Tests. | Medium |
-| **Phase 11** | [Phase_11_Documentation.md](Phase_11_Documentation.md) | Compile developer study notes, setup documentation audits, and finalize READMEs. | Low |
-
----
-
-## 3. Milestones & Checkpoints
-
-Milestones represent stable, runnable checkpoints for a single developer working sequentially.
-
-### Milestone 1: Local Infrastructure & Authentication (Phases 1–2)
-*   **Expected Completed Functionality**: Dockerized Postgres (`pgvector` + metadata tables) active, Spring Boot security filter configured, register/login endpoints functional.
-*   **Demonstrable**: Requesting a JWT token with valid credentials via Postman; verifying invalid credentials return `401 Unauthorized`.
-*   **Testable**: Unit tests for `UserRepository`, `PasswordHashing`, and integration tests for JWT authentication filter.
-*   **Remaining Incomplete**: Document uploads, AI Engine connections, React frontend.
-
-### Milestone 2: Metadata & Ingestion Pipeline (Phases 3–5)
-*   **Expected Completed Functionality**: Document vault file persistence active on disk; Spring Boot makes HTTP callback to FastAPI `/internal/v1/ingest`; FastAPI splits PDF and populates `pgvector` chunks.
-*   **Demonstrable**: Uploading a PDF via curl; checking that the database updates from `PROCESSING` to `READY` and that raw chunks appear in the Postgres database.
-*   **Testable**: Integration test mocking the FastAPI `/ingest` service; unit tests for `RecursiveCharacterTextSplitter`.
-*   **Remaining Incomplete**: Hybrid search, confidence scoring, fallback state machine, React UI.
-
-### Milestone 3: AI Retrieval Engine (Phases 6–8)
-*   **Expected Completed Functionality**: Python engine executes Vector + BM25 parallel search, applies `MinMaxScaler` normalization, performs WLC score fusion, calculates Composite Confidence, and executes Fallback tiers.
-*   **Demonstrable**: Sending test queries directly to FastAPI `/internal/v1/process`; observing fallback actions (e.g. Query Rewrite) logged in the returned `reasoningTrace` when confidence is simulated as marginal.
-*   **Testable**: Mathematical unit tests verifying `MinMaxScaler` outputs bound BM25 raw scores to $[0, 1]$; test case assertion for fallback state transition bounds.
-*   **Remaining Incomplete**: React UI, Spring Boot chat history logs.
-
-### Milestone 4: Full Stack & Visual Trace (Phase 9)
-*   **Expected Completed Functionality**: React client integrated with Spring Boot APIs. Document uploading from UI vault; chat interaction retrieves source list and displays the collapsible vertical timeline.
-*   **Demonstrable**: A user uploading a Spring Boot configuration PDF, searching for an exact configuration key, viewing the `Framer Motion` system thought animation, and verifying citations link to document snippets.
-*   **Testable**: Component unit tests using React Testing Library; validation of JWT storage in Zustand.
-*   **Remaining Incomplete**: Final E2E performance sweeps, final user documentation.
+| Playbook Phase | File Reference | Objective & Key Implementation Details |
+| :--- | :--- | :--- |
+| **Phase 1** | [Phase_01_Project_Setup.md](Phase_01_Project_Setup.md) | Initialize Docker pgvector container and bootstrap the `backend/`, `ai-engine/`, and `frontend/` skeletons. |
+| **Phase 2** | [Phase_02_Authentication.md](Phase_02_Authentication.md) | Implement Spring Security, stateless JWT filters, BCrypt hashing, and Flyway `users` table schemas. |
+| **Phase 3** | [Phase_03_Projects.md](Phase_03_Projects.md) | Enforce logical tenant boundaries by validating project owner IDs and programmatically cleaning up physical files. |
+| **Phase 4** | [Phase_04_Document_Upload.md](Phase_04_Document_Upload.md) | Save uploaded PDFs, restrict file traversal attacks, and trigger FastAPI async ingestion tasks using Spring Boot `@Async`. |
+| **Phase 5** | [Phase_05_Python_AI_Engine.md](Phase_05_Python_AI_Engine.md) | Parse PDFs page-by-page, split text recursively, generate embeddings, and resolve SQLAlchemy metadata collisions. |
+| **Phase 6** | [Phase_06_Hybrid_Retrieval.md](Phase_06_Hybrid_Retrieval.md) | Run dense cosine searches (pgvector cast to Float) and BM25 keywords in parallel, fusing scores via MinMaxScaler. |
+| **Phase 7** | [Phase_07_Confidence_Scoring.md](Phase_07_Confidence_Scoring.md) | Calculate Composite Confidence Score ($CS = 0.6 \cdot MaxSim + 0.4 \cdot Agreement$), clamping outputs to $[0, 1]$. |
+| **Phase 8** | [Phase_08_Fallback_Strategies.md](Phase_08_Fallback_Strategies.md) | Execute the 4-tier routing state machine (Rewrite $\to$ FlashRank rerank $\to$ Support Clarification) using Ollama local models. |
+| **Phase 9** | [Phase_09_React_Frontend.md](Phase_09_React_Frontend.md) | Build Zustand store routers, document upload progress lines, citation highlights, and staggered timeline animations. |
+| **Phase 10** | [Phase_10_Testing.md](Phase_10_Testing.md) | Run JUnit integration tests, pytest units, and execute the Property Key Sensitivity benchmark test suite. |
+| **Phase 11** | [Phase_11_Documentation.md](Phase_11_Documentation.md) | Audit codebase for TODO comments, verify relative links, and document deep dives in the flat learning catalog. |
 
 ---
 
-## 4. Suggested Git Commit Boundaries
+## 3. Milestones & Verification Checkpoints
 
-To ensure codebase auditability and atomic history, use the following commit guidelines:
-*   `docs: update <file>`: (For this initial documentation sweep phase).
-*   `setup: initialize <service> skeleton`: Run at the end of Phase 1.
-*   `feat(auth): implement <component>`: Separated by entity, repository, service, and controller tasks.
-*   `feat(ingest): implement character splitting`: Separated by extractor, chunker, and database storage modules.
-*   `feat(rag): implement normalized hybrid fusion`: Once the MinMaxScaler and WLC formulas are tested.
-*   `feat(fallback): integrate FlashRank re-ranking`: Upon completing the orange-tier logic.
-*   `feat(ui): build reasoning trace timeline`: Once Framer Motion animations and state controllers match.
+Use the following checkpoints to verify your progress at major development milestones:
+
+### Milestone 1: Local Infrastructure & Secure Access (Phases 1–2)
+*   **Runnable Check**: Docker pgvector responds to SQL queries, and the backend service compiles.
+*   **Verification**: Make a POST request to `/api/auth/register` and verify a JWT is returned. Request `/api/projects` without a token and assert a JSON 401 response is returned.
+
+### Milestone 2: Logical Workspaces & Ingestion Pipeline (Phases 3–5)
+*   **Runnable Check**: Spring Boot uploads file to storage folder and asynchronously invokes FastAPI `/internal/v1/ingest`.
+*   **Verification**: Check that database status transitions: `PROCESSING` $\to$ `READY`, and that chunks appear in the `document_chunks` table containing float arrays.
+
+### Milestone 3: Neural Search, Confidence, & Fallbacks (Phases 6–8)
+*   **Runnable Check**: AI engine runs vector similarity and BM25 queries, blends scores, and processes fallback transitions.
+*   **Verification**: Execute POST `/internal/v1/process`. When search confidence is low, verify that Ollama rewrites the query or generates a support clarification question.
+
+### Milestone 4: Fused UI & Observable Trace (Phase 9)
+*   **Runnable Check**: React client displays vault tables, chat consoles, and timeline dropdowns.
+*   **Verification**: Ask RAG questions in the UI. Confirm HSL badges reflect confidence categories and timeline elements stagger expand.
 
 ---
 
-## 5. Suggested GitHub Issues & Epics
+## 4. Git Commit Standards
 
-### Epic 1: Orchestration & Security Core
-*   **Goal**: Establish PostgreSQL persistence and secure communication boundaries.
-*   **Issues**:
-    *   *Issue 1.1*: Initialize Docker Compose PostgreSQL local instance.
-    *   *Issue 1.2*: Implement Hibernate database entity mapping.
-    *   *Issue 1.3*: Configure Spring Security and custom JWT filter.
-
-### Epic 2: PDF Ingestion Engine
-*   **Goal**: Extract, chunk, embed, and index technical PDF files.
-*   **Issues**:
-    *   *Issue 2.1*: Develop Spring Boot StorageService and UploadController.
-    *   *Issue 2.2*: Build FastAPI PDF extractor and chunking module.
-    *   *Issue 2.3*: Implement pgvector integration and chunk persistence.
-
-### Epic 3: Advanced Hybrid RAG Retriever
-*   **Goal**: Mathematically combine Vector & keyword queries with fallback safety rails.
-*   **Issues**:
-    *   *Issue 3.1*: Code BM25 Search & MinMaxScaler normalization.
-    *   *Issue 3.2*: Create Composite Confidence Score ($CS$) calculator.
-    *   *Issue 3.3*: Write Fallback State Machine controller (Rewriting, FlashRank, Clarification).
-
-### Epic 4: Observable UI Portal
-*   **Goal**: React components for document vault and transparent chat.
-*   **Issues**:
-    *   *Issue 4.1*: Develop Document Vault dashboard and upload hooks.
-    *   *Issue 4.2*: Build Chat bubble and Citation Matrix sidebar.
-    *   *Issue 4.3*: Design collapsible vertical reasoning trace timeline.
+To maintain clean and auditable revision histories, use atomic commits matching the following conventions:
+- `setup: docker database and folder structures` (Phase 1)
+- `feat(auth): add spring security configuration and jwt filters` (Phase 2)
+- `feat(project): implement project CRUD and tenant validation` (Phase 3)
+- `feat(document): add storage services and async trigger logic` (Phase 4)
+- `feat(ingest): build pdf parser and pgvector persistence` (Phase 5)
+- `feat(rag): code hybrid retrieval MinMaxScaler fusion` (Phase 6)
+- `feat(confidence): implement composite scoring algorithm` (Phase 7)
+- `feat(fallback): write decision state machine and flashrank` (Phase 8)
+- `feat(ui): implement chat bubbles and staggered timelines` (Phase 9)
+- `test: add integration test suite and sensitivity benchmark` (Phase 10)
+- `docs: audit links and compile developer guides` (Phase 11)
