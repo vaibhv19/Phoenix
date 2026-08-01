@@ -14,5 +14,18 @@ services:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
 
+  # Ollama service provides the local LLM server (mistral) and reranker model
+  ollama:
+    image: ollama/ollama:latest
+    container_name: phoenix-ollama
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
 volumes:
   pgdata:
