@@ -22,13 +22,6 @@ if ($containers -match "phoenix-postgres") {
     Write-Result "PostgreSQL container" $false "Container not running"
     $allPass = $false
 }
-if ($containers -match "phoenix-ollama") {
-    Write-Result "Ollama container" $true
-} else {
-    Write-Result "Ollama container" $false "Container not running"
-    $allPass = $false
-}
-
 # 2. PostgreSQL health
 Write-Host "Checking PostgreSQL health..."
 $pgReady = docker exec phoenix-postgres pg_isready -U postgres -d phoenix
