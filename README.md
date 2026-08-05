@@ -7,8 +7,8 @@ Built using **Spring Boot 3.3.x**, **FastAPI**, and **React 19**, Phoenix bridge
 Note: Phoenix runs entirely locally by design — see [Setup & Running Locally](#setup--running-locally) below. No hosted demo is provided.
 
 <!-- TODO: replace with real screenshot of the Investigation Console -->
-![Phoenix Investigation Console](Docs/assets/investigation-console-demo.png)
-*Figure 1: The Phoenix Investigation Console interface visualizing RAG retrieval scores, consensus Jaccard agreement metrics, and active fallback pipelines.*
+![Phoenix Investigation Console (Mockup)](Docs/assets/investigation-console-demo.png)
+*Figure 1: A design mockup of the Phoenix Investigation Console interface visualizing RAG retrieval scores, consensus Jaccard agreement metrics, and active fallback pipelines.*
 
 ---
 
